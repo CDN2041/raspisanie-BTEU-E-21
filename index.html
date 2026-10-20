@@ -209,25 +209,36 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .seg button{border-radius:9px;padding:10px 4px;font-size:14px;font-weight:500;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:600}
 
-/* Анимации */
+/* Анимации: мягкая кривая как в iOS */
+:root{--ios:cubic-bezier(.32,.72,0,1)}
 @media (prefers-reduced-motion: no-preference){
-  @keyframes inR{from{opacity:0;transform:translateX(18px)}}
-  @keyframes inL{from{opacity:0;transform:translateX(-18px)}}
-  @keyframes inUp{from{opacity:0;transform:translateY(12px)}}
+  @keyframes inR{from{opacity:0;transform:translateX(24px)}}
+  @keyframes inL{from{opacity:0;transform:translateX(-24px)}}
+  @keyframes inUp{from{opacity:0;transform:translateY(10px)}}
   @keyframes fade{from{opacity:0}}
+  @keyframes fadeOut{to{opacity:0}}
   @keyframes sheetUp{from{transform:translateY(100%)}}
-  @keyframes pop{from{opacity:0;transform:scale(.94)}}
+  @keyframes sheetDown{to{transform:translateY(100%)}}
+  @keyframes pop{from{opacity:0;transform:scale(1.08)}}
+  @keyframes popOut{to{opacity:0;transform:scale(.96)}}
   @keyframes pulse{50%{opacity:.25}}
-  .enter-r>*{animation:inR .32s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
-  .enter-l>*{animation:inL .32s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
-  .enter-up>*{animation:inUp .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*45ms)}
-  .sheet:not([hidden]),.cdlg:not([hidden]){animation:fade .2s ease both}
-  .sheet:not([hidden]) .panel{animation:sheetUp .32s cubic-bezier(.2,.8,.2,1) both}
-  .cdlg:not([hidden]) .cbox{animation:pop .22s cubic-bezier(.2,.8,.2,1) both}
+  .enter-r>*{animation:inR .5s var(--ios) both;animation-delay:calc(var(--i,0)*28ms)}
+  .enter-l>*{animation:inL .5s var(--ios) both;animation-delay:calc(var(--i,0)*28ms)}
+  .enter-up>*{animation:inUp .55s var(--ios) both;animation-delay:calc(var(--i,0)*40ms)}
+  .cal-grid.slide-r{animation:inR .45s var(--ios) both}
+  .cal-grid.slide-l{animation:inL .45s var(--ios) both}
+  .sheet:not([hidden]),.cdlg:not([hidden]){animation:fade .35s ease both}
+  .sheet:not([hidden]) .panel{animation:sheetUp .5s var(--ios) both}
+  .cdlg:not([hidden]) .cbox{animation:pop .35s var(--ios) both}
+  .sheet.closing{animation:fadeOut .3s ease both}
+  .sheet.closing .panel{animation:sheetDown .3s var(--ios) both}
+  .cdlg.closing{animation:fadeOut .25s ease both}
+  .cdlg.closing .cbox{animation:popOut .25s ease both}
   .h-state.live i{animation:pulse 1.6s ease-in-out infinite}
-  .bar i,.bar2 i,.fill{transition:width .8s ease}
-  button{transition:transform .12s ease,background-color .15s ease}
-  button:active{transform:scale(.96)}
+  .bar i,.bar2 i,.fill{transition:width 1s var(--ios)}
+  .day{transition:box-shadow .3s var(--ios),background-color .3s var(--ios)}
+  button{transition:transform .3s var(--ios),background-color .2s ease,opacity .2s ease}
+  button:active{transform:scale(.97);transition-duration:.08s}
 }
 </style>
 </head>
@@ -263,7 +274,7 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
   <div class="panel" role="dialog" aria-labelledby="wt">
     <div class="cal-head"><b id="wt">Октябрь 2026</b><div><button class="navbtn" id="cprev" aria-label="Предыдущий месяц">‹</button><button class="navbtn" id="cnext" aria-label="Следующий месяц">›</button></div></div>
     <div class="cal-grid" id="cgrid"></div>
-    <div class="actions"><button class="btn ghost" id="ctoday">Сегодня</button><button class="btn ghost" data-close>Закрыть</button></div>
+    <div class="actions"><button class="btn ghost" id="ctoday">Эта неделя</button><button class="btn ghost" data-close>Закрыть</button></div>
   </div>
 </div>
 
@@ -394,11 +405,13 @@ function fmtRange(mon){var sat=addDays(mon,5);
   return mon.getMonth()===sat.getMonth()?mon.getDate()+"-"+sat.getDate()+" "+MONF[mon.getMonth()]:mon.getDate()+" "+MON[mon.getMonth()]+" - "+sat.getDate()+" "+MON[sat.getMonth()];}
 function span(l){return [toMin(PAIRS[l.p][0]),toMin(PAIRS[l.p][1])];}
 
+var BYDAY=[[],[],[],[],[],[]];
+LESSONS.forEach(function(l){BYDAY[l.d].push(l);});
+BYDAY.forEach(function(a){a.sort(function(x,y){return x.p-y.p;});});
 function lessonsFor(d){
   var wd=(d.getDay()+6)%7; if(wd>5)return [];
   var wt=weekType(d), k=key(d);
-  return LESSONS.filter(function(l){return l.d===wd&&(l.w==="all"||l.w===wt)&&(!l.from||k>=l.from);})
-    .sort(function(a,b){return a.p-b.p;});
+  return BYDAY[wd].filter(function(l){return (l.w==="all"||l.w===wt)&&(!l.from||k>=l.from);});
 }
 
 // ---------- Хранилище ----------
@@ -412,7 +425,10 @@ var settings=load(SKEY,{}); if(settings.ui!=="old")settings.ui="new"; if(["dark"
 function canNote(l){return l.t==="prac"&&l.s!==FK;}
 function noteKey(d,l){return key(d)+"|"+l.p+"|"+l.s;}
 function noteOf(d,l){return canNote(l)?notes[noteKey(d,l)]:undefined;}
-function dayHasNote(d){var p=key(d)+"|";for(var k in notes)if(k.indexOf(p)===0)return true;return false;}
+var noteDays={};
+function indexNotes(){noteDays={};for(var k in notes)noteDays[k.slice(0,10)]=1;}
+indexNotes();
+function dayHasNote(d){return !!noteDays[key(d)];}
 
 // ---------- Общие куски разметки ----------
 function tagHtml(l){return l.t==="lec"?'<span class="tag t-lec">Лекция</span>':l.t==="prac"?'<span class="tag t-prac">Практика</span>':'<span class="tag t-other">Другое</span>';}
@@ -567,8 +583,14 @@ function show(v){
 function refresh(){if(view==="home")renderHome(false);else renderFull();}
 
 // ---------- Окна ----------
-function openSheet(id){$(id).hidden=false;}
-function closeSheet(id){$(id).hidden=true;}
+var MOTION=!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
+function openSheet(id){var el=$(id);el.classList.remove("closing");el.hidden=false;}
+function closeSheet(id){
+  var el=$(id); if(el.hidden||el.classList.contains("closing"))return;
+  if(!MOTION){el.hidden=true;return;}
+  el.classList.add("closing");
+  setTimeout(function(){el.hidden=true;el.classList.remove("closing");},300);
+}
 Array.prototype.forEach.call(document.querySelectorAll(".sheet"),function(sh){
   sh.addEventListener("click",function(e){if(e.target===sh||e.target.closest("[data-close]"))closeSheet(sh.id);});
 });
@@ -585,18 +607,18 @@ function openNote(b){
   openSheet("nsheet");
   if(!notes[curNote])setTimeout(function(){ntext.focus();},50);
 }
-function doneNote(){save(NKEY,notes);closeSheet("nsheet");curNote=null;refresh();}
+function doneNote(){save(NKEY,notes);indexNotes();closeSheet("nsheet");curNote=null;refresh();}
 $("nsave").onclick=function(){var v=ntext.value.trim();if(v)notes[curNote]=v;else delete notes[curNote];doneNote();};
-$("ndel").onclick=function(){cdlg.hidden=false;};
-$("cno").onclick=function(){cdlg.hidden=true;};
-cdlg.addEventListener("click",function(e){if(e.target===cdlg)cdlg.hidden=true;});
-$("cyes").onclick=function(){cdlg.hidden=true;delete notes[curNote];doneNote();};
+$("ndel").onclick=function(){openSheet("cdlg");};
+$("cno").onclick=function(){closeSheet("cdlg");};
+cdlg.addEventListener("click",function(e){if(e.target===cdlg)closeSheet("cdlg");});
+$("cyes").onclick=function(){closeSheet("cdlg");delete notes[curNote];doneNote();};
 
 // Выбор недели: календарь месяца
 var MONN=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 var cMonth=null;
 function glyph(t){return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="'+(t==="over"?6:18)+'" r="3.2" fill="currentColor"/></svg>';}
-function renderCal(){
+function renderCal(dir){
   var today=day0(new Date()), first=new Date(cMonth.getFullYear(),cMonth.getMonth(),1), m=mondayOf(first), sm=mondayOf(sel).getTime();
   $("wt").textContent=MONN[first.getMonth()]+" "+first.getFullYear();
   var h=["Пн","Вт","Ср","Чт","Пт","Сб","Вс",""].map(function(x){return '<div class="h">'+x+'</div>';}).join("");
@@ -609,14 +631,21 @@ function renderCal(){
     h+='<button class="g" data-w="'+m.getTime()+'" aria-label="Неделя '+weekName(m)+'">'+glyph(weekType(m))+'</button></div>';
     m=addDays(m,7);
   }
-  $("cgrid").innerHTML=h;
+  var g=$("cgrid"); g.innerHTML=h; g.classList.remove("slide-r","slide-l");
+  if(dir){void g.offsetWidth;g.classList.add(dir>0?"slide-r":"slide-l");}
 }
 function pick(d){sel=d;closeSheet("wsheet");renderFull();}
 $("mark").innerHTML=I_CAL;
 $("mark").onclick=function(){cMonth=new Date(sel.getFullYear(),sel.getMonth(),1);renderCal();openSheet("wsheet");};
-$("cprev").onclick=function(){cMonth=new Date(cMonth.getFullYear(),cMonth.getMonth()-1,1);renderCal();};
-$("cnext").onclick=function(){cMonth=new Date(cMonth.getFullYear(),cMonth.getMonth()+1,1);renderCal();};
-$("ctoday").onclick=function(){pick(studyDay(new Date()));};
+function goMonth(d){var n=new Date(d.getFullYear(),d.getMonth(),1), dir=n-cMonth; cMonth=n; renderCal(dir>0?1:dir<0?-1:0);}
+$("cprev").onclick=function(){goMonth(new Date(cMonth.getFullYear(),cMonth.getMonth()-1,1));};
+$("cnext").onclick=function(){goMonth(new Date(cMonth.getFullYear(),cMonth.getMonth()+1,1));};
+$("ctoday").onclick=function(){
+  var sd=studyDay(new Date()), changed=mondayOf(sel).getTime()!==mondayOf(sd).getTime();
+  if(changed)sel=sd;
+  goMonth(sd); if(!changed)renderCal(0);
+  if(changed)renderFull();
+};
 $("cgrid").addEventListener("click",function(e){
   var b=e.target.closest("button"); if(!b)return;
   if(b.dataset.w){var wm=new Date(+b.dataset.w), sd=studyDay(new Date());pick(mondayOf(sd).getTime()===wm.getTime()?sd:wm);return;}
@@ -667,7 +696,9 @@ $("toToday").onclick=function(){sel=studyDay(new Date());renderFull();};
 applyTheme();
 show(settings.ui==="old"?"full":"home");
 function quiet(){return document.querySelectorAll(".sheet:not([hidden])").length===0;}
-setInterval(function(){if(!document.hidden&&quiet())refresh();},30000);
+(function tick(){ // обновление ровно в начале каждой минуты
+  setTimeout(function(){if(!document.hidden&&quiet())refresh();tick();},60000-Date.now()%60000+200);
+})();
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&quiet())refresh();});
 })();
 </script>
