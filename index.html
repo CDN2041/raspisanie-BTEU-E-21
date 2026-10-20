@@ -468,8 +468,8 @@ function gapHtml(kind,gs,ge){
   return '<div class="gap'+cls+'"><span>Окно '+dur(ge-gs)+(on?", ещё "+dur(ge-m):"")+'</span></div>';
 }
 
-function lessonCard(l,isToday,m){
-  var se=span(l), s=se[0], e=se[1], isNow=isToday&&m>=s&&m<e, isPast=isToday&&m>=e;
+function lessonCard(l,isToday,m,dayPast){
+  var se=span(l), s=se[0], e=se[1], isNow=isToday&&m>=s&&m<e, isPast=dayPast||(isToday&&m>=e);
   var nt=noteOf(sel,l), hn=!!nt, nw="", prog="";
   if(l.from&&l.from===key(sel)){var fd=new Date(l.from+"T00:00");nw='<span class="tag t-new">с '+fd.getDate()+' '+MON[fd.getMonth()]+'</span>';}
   if(isNow){
@@ -511,7 +511,7 @@ function renderFull(){
         else if(p.p===2&&l.p===3)h+=gapHtml("big",BIGMIN[0],BIGMIN[1]);
         else h+=gapHtml("small",span(p)[1],span(l)[0]);
       }
-      h+=lessonCard(l,isToday,m);
+      h+=lessonCard(l,isToday,m,sel<today);
     });
   }
   var el=$("list"), sk=sel.getTime();
