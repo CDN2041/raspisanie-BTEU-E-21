@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Пары Е-21</title>
 <meta name="theme-color" content="#EDEFF3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E1117" media="(prefers-color-scheme: dark)">
@@ -15,6 +15,7 @@
 <link rel="icon" type="image/png" href="icon.png">
 <style>
 :root{color-scheme:light dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body,button{touch-action:manipulation}
 body{margin:0;-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
 </style>
@@ -292,6 +293,7 @@ document.addEventListener("visibilitychange",function(){if(!document.hidden)rend
 </script>
 
 <script>
+["gesturestart","gesturechange","gestureend"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault();},{passive:false});});
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
 </script>
 </body>
