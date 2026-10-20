@@ -163,6 +163,10 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .cbox b{font-size:17px}
 .cbox p{margin:0 0 10px;color:var(--muted);font-size:14px}
 .btn.danger{background:var(--warn);color:var(--bg)}
+.links{display:flex;justify-content:center;gap:10px;margin-top:12px}
+.links a{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);text-decoration:none;font-size:13px;font-weight:500}
+.links a:active{background:var(--surface)}
+.links svg{width:16px;height:16px}
 @media (prefers-reduced-motion: no-preference){.lesson,.day{transition:background .15s,border-color .15s}}
 </style>
 </head>
@@ -186,6 +190,11 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 
   <nav class="days" id="days"></nav>
   <section class="list" id="list"></section>
+
+  <footer class="links">
+    <a href="https://github.com/CDN2041" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg><span>GitHub</span></a>
+    <a href="https://t.me/cdn2041" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4 3 11l6 2.5M21 4l-4 16-8-6.5M21 4 9 13.5V19l3-3.5"/></svg><span>Telegram</span></a>
+  </footer>
 
 </div>
 
