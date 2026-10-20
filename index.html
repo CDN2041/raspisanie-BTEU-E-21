@@ -170,6 +170,10 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)}
 .panel{background:var(--surface);width:100%;max-width:560px;max-height:85%;border-radius:20px 20px 0 0;box-sizing:border-box;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px;
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.panel::before{content:"";flex:none;width:36px;height:5px;border-radius:3px;background:var(--line);align-self:center;margin:-8px 0 0}
+.panel{touch-action:none}
+.panel textarea{touch-action:auto}
+.list{touch-action:pan-y}
 .panel h2{font-family:var(--font-d);font-weight:500;font-size:19px;margin:0;line-height:1.25;overflow-wrap:anywhere}
 .nsub{color:var(--muted);font-size:14px;margin-top:4px}
 #ntext{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;width:100%;box-sizing:border-box;min-height:140px;resize:vertical}
@@ -591,8 +595,29 @@ function closeSheet(id){
   var el=$(id); if(el.hidden||el.classList.contains("closing"))return;
   if(!MOTION){el.hidden=true;return;}
   el.classList.add("closing");
-  setTimeout(function(){el.hidden=true;el.classList.remove("closing");},300);
+  setTimeout(function(){el.hidden=true;el.classList.remove("closing");var p=el.querySelector(".panel");if(p){p.style.transform="";p.style.transition="";}},300);
 }
+// Смахнуть шторку вниз, чтобы закрыть
+Array.prototype.forEach.call(document.querySelectorAll(".sheet"),function(sh){
+  var panel=sh.querySelector(".panel"), y0=null, dy=0, t0=0;
+  panel.addEventListener("touchstart",function(e){
+    if(e.target.closest("textarea"))return;
+    y0=e.touches[0].clientY; dy=0; t0=Date.now(); panel.style.transition="none";
+  },{passive:true});
+  panel.addEventListener("touchmove",function(e){
+    if(y0===null)return;
+    var d=e.touches[0].clientY-y0;
+    dy=d>0?d:d/4; // вверх тянется туго, как в iOS
+    panel.style.transform="translateY("+dy+"px)";
+  },{passive:true});
+  function end(){
+    if(y0===null)return;
+    var v=dy/Math.max(1,Date.now()-t0); y0=null;
+    if(dy>110||(v>.5&&dy>30))closeSheet(sh.id);
+    else{panel.style.transition="transform .4s var(--ios)";panel.style.transform="";}
+  }
+  panel.addEventListener("touchend",end); panel.addEventListener("touchcancel",end);
+});
 Array.prototype.forEach.call(document.querySelectorAll(".sheet"),function(sh){
   sh.addEventListener("click",function(e){if(e.target===sh||e.target.closest("[data-close]"))closeSheet(sh.id);});
 });
@@ -691,6 +716,25 @@ $("days").addEventListener("click",function(e){
   var b=e.target.closest(".day"); if(!b)return;
   sel=addDays(mondayOf(sel),+b.dataset.i); renderFull();
 });
+// Свайп влево и вправо по списку пар листает дни
+function shiftDay(n){var d=addDays(sel,n);if(d.getDay()===0)d=addDays(d,n);sel=d;renderFull();}
+(function(){
+  var el=$("list"), x0=null, y0=0, dx=0, lock=null;
+  el.addEventListener("touchstart",function(e){x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;el.style.transition="none";},{passive:true});
+  el.addEventListener("touchmove",function(e){
+    if(x0===null)return;
+    var mx=e.touches[0].clientX-x0, my=e.touches[0].clientY-y0;
+    if(!lock&&(Math.abs(mx)>10||Math.abs(my)>10))lock=Math.abs(mx)>Math.abs(my)*1.2?"x":"y";
+    if(lock!=="x")return;
+    dx=mx; el.style.transform="translateX("+dx*.4+"px)"; el.style.opacity=String(1-Math.min(.5,Math.abs(dx)/500));
+  },{passive:true});
+  function end(){
+    if(x0===null)return; x0=null;
+    if(lock==="x"&&Math.abs(dx)>60){el.style.transition="";el.style.transform="";el.style.opacity="";shiftDay(dx<0?1:-1);}
+    else{el.style.transition="transform .4s var(--ios),opacity .4s var(--ios)";el.style.transform="";el.style.opacity="";}
+  }
+  el.addEventListener("touchend",end); el.addEventListener("touchcancel",end);
+})();
 $("prev").onclick=function(){sel=addDays(sel,-7);renderFull();};
 $("next").onclick=function(){sel=addDays(sel,7);renderFull();};
 $("toToday").onclick=function(){sel=studyDay(new Date());renderFull();};
