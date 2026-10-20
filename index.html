@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Пары Е-21</title>
+<meta name="theme-color" content="#EDEFF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1117" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Пары">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+:root{color-scheme:light dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: одна колонка как приложение, шапка с меткой недели (точка над/под чертой), лента дней, карточки пар */
+:root{
+  --bg:#EDEFF3; --surface:#FFFFFF; --fg:#141821; --muted:#646C7E; --line:#D7DBE4;
+  --accent:#2B47C4; --accent-soft:#E2E7FA; --lec:#2462C9; --lec-soft:#E1ECFB;
+  --prac:#13805E; --prac-soft:#DDF2EA; --other:#7A5A12; --other-soft:#F4ECD9; --warn:#B4231B;
+  --font-d:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-b:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1117; --surface:#171B24; --fg:#E8EBF1; --muted:#8B93A5; --line:#2A303C;
+  --accent:#8FA3FF; --accent-soft:#222B4A; --lec:#79A8FF; --lec-soft:#1C2A44;
+  --prac:#52CC9F; --prac-soft:#163A2F; --other:#E3BE6B; --other-soft:#3A2F17; --warn:#FF7A70; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1117; --surface:#171B24; --fg:#E8EBF1; --muted:#8B93A5; --line:#2A303C;
+  --accent:#8FA3FF; --accent-soft:#222B4A; --lec:#79A8FF; --lec-soft:#1C2A44;
+  --prac:#52CC9F; --prac-soft:#163A2F; --other:#E3BE6B; --other-soft:#3A2F17; --warn:#FF7A70; color-scheme:dark}
+
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--font-b);font-size:15px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent}
+.app{max-width:560px;margin:0 auto;padding-block:18px 110px;display:flex;flex-direction:column;gap:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;margin:4px 0 0;text-wrap:balance}
+.group{font-family:var(--font-m);font-size:13px;color:var(--muted);margin-top:6px}
+.mark{flex:none;width:64px;height:52px;border-radius:14px;background:var(--surface);display:grid;place-items:center;border:1px solid var(--line)}
+.mark svg{display:block}
+
+.weeknav{display:flex;align-items:center;gap:8px}
+.navbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:40px;height:36px;font-size:18px;line-height:1}
+.range{flex:1;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.today{border:0;background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:0 12px;height:36px;font-weight:600}
+
+.days{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.day{border:1px solid transparent;background:transparent;border-radius:12px;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.day .dn{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.day .dd{font-family:var(--font-m);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
+.day .cnt{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.day.is-today .dd{color:var(--accent)}
+.day.sel{background:var(--surface);border-color:var(--line)}
+
+.status{font-weight:600;font-size:14px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--accent)}
+.list{display:flex;flex-direction:column;gap:10px}
+.lesson{display:grid;grid-template-columns:62px 1fr;gap:12px;background:var(--surface);border-radius:16px;padding:14px;border:1px solid var(--line)}
+.lesson.now{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.lesson.past{opacity:.55}
+.time{display:flex;flex-direction:column;font-family:var(--font-m);font-variant-numeric:tabular-nums}
+.time .pn{font-size:11px;color:var(--muted);font-family:var(--font-b);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.time b{font-size:17px}
+.time span{font-size:13px;color:var(--muted)}
+.body{min-width:0;display:flex;flex-direction:column;gap:4px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:6px}
+.t-lec{background:var(--lec-soft);color:var(--lec)}
+.t-prac{background:var(--prac-soft);color:var(--prac)}
+.t-other{background:var(--other-soft);color:var(--other)}
+.t-wk{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.t-new{background:var(--accent-soft);color:var(--accent)}
+.subj{font-weight:600;font-size:16px;line-height:1.3;margin:0;overflow-wrap:anywhere}
+.who{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.room{font-family:var(--font-m);font-size:13px}
+.room small{font-family:var(--font-b);color:var(--muted);font-size:12px}
+.bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.left{font-size:12px;color:var(--accent);font-weight:600}
+.gap{font-size:13px;color:var(--muted);text-align:center;padding:2px 0;display:flex;align-items:center;gap:10px}
+.gap::before,.gap::after{content:"";flex:1;border-top:1px dashed var(--line)}
+.empty{text-align:center;color:var(--muted);padding:40px 12px;background:var(--surface);border-radius:16px;border:1px solid var(--line)}
+.empty b{display:block;font-family:var(--font-d);font-weight:500;color:var(--fg);font-size:18px;margin-bottom:4px}
+
+@media (prefers-reduced-motion: no-preference){.lesson,.day{transition:background .15s,border-color .15s}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="eyebrow" id="rel">эта неделя</div>
+      <h1 id="wtitle">Под чертой</h1>
+      <div class="group">Группа Е-21</div>
+    </div>
+    <div class="mark" id="mark" aria-hidden="true"></div>
+  </header>
+
+  <div class="weeknav">
+    <button class="navbtn" id="prev" aria-label="Предыдущая неделя">‹</button>
+    <div class="range" id="range"></div>
+    <button class="navbtn" id="next" aria-label="Следующая неделя">›</button>
+    <button class="today" id="toToday">Сегодня</button>
+  </div>
+
+  <nav class="days" id="days"></nav>
+  <div id="status" class="status" hidden></div>
+  <section class="list" id="list"></section>
+
+</div>
+
+<script>
+(function(){
+// Неделя с понедельника 19.10.2026 = "под чертой", дальше чередуется
+var ANCHOR = new Date(2026,9,19);
+var PAIRS = [null,["9:00","10:35"],["10:50","12:25"],["12:55","14:30"],["14:40","16:15"],["16:25","18:00"]];
+var DAYS = ["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+var DSHORT = ["Пн","Вт","Ср","Чт","Пт","Сб"];
+
+var FK = "Физическая культура", FKT = "ст. пр. Маркевич О. П., ст. пр. Степанцов В. М., пр. Руденко Т. Н.";
+var KD = "Кадровое делопроизводство и организация документационного обеспечения";
+var EO = "Экономика организации (предприятия)";
+var PO = "Правовое обеспечение бизнеса";
+
+// РАСПИСАНИЕ. d: день (0=Пн ... 5=Сб); p: номер пары (1-5); w: "all" каждую, "over" над чертой, "under" под чертой;
+// t: "lec" лекция, "prac" практика, "other" другое; from: с какой даты пара начинается (необязательно)
+var DEFAULT = [
+ // Понедельник
+ {d:0,p:1,w:"over", s:"Философия", t:"prac", tch:"доц. Малахов Д. В.", r:"4-20"},
+ {d:0,p:1,w:"under",s:EO, t:"prac", tch:"асс. Черней А. Д.", r:"1-21", from:"2026-09-21"},
+ {d:0,p:2,w:"all",  s:FK, t:"other", tch:FKT, r:""},
+ {d:0,p:3,w:"all",  s:"Конфликтология", t:"lec", tch:"ст. пр. Дворкина М. А.", r:"1-10"},
+ {d:0,p:4,w:"all",  s:EO, t:"lec", tch:"доц. Гасанова Т. В.", r:"4-25"},
+ // Вторник
+ {d:1,p:1,w:"all",  s:"Макроэкономика", t:"lec", tch:"ст. пр. Чернявский М. Р.", r:"1-10"},
+ {d:1,p:2,w:"over", s:"Макроэкономика", t:"prac", tch:"пр.-ст. Адасенко А. И.", r:"4-25"},
+ {d:1,p:2,w:"under",s:"Трудовое право", t:"prac", tch:"доц. Сныткова Н. А.", r:"3-11", from:"2026-09-22"},
+ {d:1,p:3,w:"over", s:"Противодействие коррупции", t:"lec", tch:"ст. пр. Козырев Д. А.", r:"1-2"},
+ {d:1,p:3,w:"under",s:"Философия", t:"prac", tch:"доц. Малахов Д. В.", r:"1-22", from:"2026-09-22"},
+ {d:1,p:4,w:"all",  s:"Психология управления", t:"prac", tch:"ст. пр. Дворкина М. А.", r:"4-25"},
+ // Среда
+ {d:2,p:1,w:"over", s:"Трудовое право", t:"lec", tch:"доц. Сныткова Н. А.", r:"3-11"},
+ {d:2,p:1,w:"under",s:"Макроэкономика", t:"lec", tch:"ст. пр. Чернявский М. Р.", r:"1-6", from:"2026-09-23"},
+ {d:2,p:2,w:"all",  s:FK, t:"other", tch:FKT, r:""},
+ {d:2,p:3,w:"all",  s:"Философия", t:"lec", tch:"доц. Малахов Д. В.", r:"1-10"},
+ {d:2,p:4,w:"over", s:EO, t:"prac", tch:"асс. Черней А. Д.", r:"4-12"},
+ // Четверг
+ {d:3,p:1,w:"over", s:"Макроэкономика", t:"prac", tch:"пр.-ст. Адасенко А. И.", r:"1-25"},
+ {d:3,p:2,w:"over", s:"Трудовое право", t:"prac", tch:"доц. Сныткова Н. А.", r:"3-11"},
+ {d:3,p:2,w:"under",s:"Трудовое право", t:"lec", tch:"доц. Сныткова Н. А.", r:"3-11", from:"2026-09-24"},
+ {d:3,p:3,w:"over", s:KD, t:"lec", tch:"ст. пр. Матвейчик М. Г.", r:"1-13"},
+ {d:3,p:3,w:"under",s:KD, t:"prac", tch:"ст. пр. Матвейчик М. Г.", r:"3-16, 5-18", from:"2026-09-24"},
+ {d:3,p:4,w:"all",  s:PO, t:"lec", tch:"ст. пр. Батура С. П.", r:"1-22", from:"2026-10-22"},
+ {d:3,p:5,w:"under",s:PO, t:"prac", tch:"ст. пр. Батура С. П.", r:"1-25", from:"2026-10-22"},
+ // Пятница
+ {d:4,p:1,w:"under",s:"Конфликтология", t:"prac", tch:"ст. пр. Дворкина М. А.", r:"1-13", from:"2026-09-25"},
+ {d:4,p:2,w:"over", s:KD, t:"prac", tch:"ст. пр. Матвейчик М. Г.", r:"5-9"},
+ {d:4,p:2,w:"under",s:"Макроэкономика", t:"prac", tch:"пр.-ст. Адасенко А. И.", r:"5-23", from:"2026-09-25"},
+ {d:4,p:3,w:"over", s:"Конфликтология", t:"prac", tch:"ст. пр. Дворкина М. А.", r:"5-28"},
+ {d:4,p:3,w:"under",s:KD, t:"lec", tch:"ст. пр. Матвейчик М. Г.", r:"1-28", from:"2026-09-25"},
+ {d:4,p:4,w:"all",  s:"Психология управления", t:"lec", tch:"ст. пр. Дворкина М. А.", r:"1-28"},
+ {d:4,p:5,w:"over", s:PO, t:"prac", tch:"ст. пр. Батура С. П.", r:"1-22", from:"2026-10-30"},
+ // Суббота
+ {d:5,p:1,w:"all",  s:"Теоретические основы менеджмента", t:"lec", tch:"доц. Климович Л. К.", r:"5-18"},
+ {d:5,p:2,w:"all",  s:"Теоретические основы менеджмента", t:"prac", tch:"доц. Климович Л. К.", r:"5-18"},
+ {d:5,p:3,w:"over", s:PO, t:"lec", tch:"ст. пр. Батура С. П.", r:"1-10", from:"2026-10-31"},
+ {d:5,p:3,w:"under",s:"Противодействие коррупции", t:"prac", tch:"пр. Печура А. Ф.", r:"5-18", from:"2026-09-26"}
+];
+
+var lessons=DEFAULT;
+
+function day0(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function mondayOf(d){var x=day0(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return x;}
+function weeksBetween(a,b){return Math.round((mondayOf(b)-mondayOf(a))/864e5/7);}
+function weekType(d){var n=weeksBetween(ANCHOR,d);return (((n%2)+2)%2)===0?"under":"over";}
+function key(d){var m=d.getMonth()+1,dd=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(dd<10?"0":"")+dd;}
+function toMin(t){var a=t.split(":");return +a[0]*60+ +a[1];}
+function dur(m){var h=Math.floor(m/60),mm=m%60;return (h?h+" ч ":"")+(mm||!h?mm+" мин":"").trim();}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+var MON=["янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
+var MONF=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+
+function lessonsFor(d){
+  var wd=(d.getDay()+6)%7; if(wd>5)return [];
+  var wt=weekType(d), k=key(d);
+  return lessons.filter(function(l){return l.d===wd&&(l.w==="all"||l.w===wt)&&(!l.from||k>=l.from);})
+    .sort(function(a,b){return a.p-b.p;});
+}
+
+var now=new Date(), sel=day0(now);
+if(sel.getDay()===0)sel.setDate(sel.getDate()+1);
+
+function markSvg(wt){
+  var cy=wt==="over"?13:35;
+  return '<svg width="44" height="48" viewBox="0 0 44 48"><line x1="4" y1="24" x2="40" y2="24" stroke="var(--fg)" stroke-width="2.5" stroke-linecap="round"/><circle cx="22" cy="'+cy+'" r="6" fill="var(--accent)"/></svg>';
+}
+
+function render(){
+  now=new Date();
+  var today=day0(now), wt=weekType(sel), mon=mondayOf(sel), n=weeksBetween(today,sel);
+  if(today.getDay()===0)n=weeksBetween(new Date(today.getTime()+864e5),sel);
+  var rel=n===0?"эта неделя":n===1?"следующая неделя":n===-1?"прошлая неделя":n>1?"через "+n+" нед.":(-n)+" нед. назад";
+  document.getElementById("rel").textContent=rel;
+  document.getElementById("wtitle").textContent=wt==="over"?"Над чертой":"Под чертой";
+  document.getElementById("mark").innerHTML=markSvg(wt);
+  var sat=new Date(mon);sat.setDate(sat.getDate()+5);
+  document.getElementById("range").textContent=mon.getMonth()===sat.getMonth()
+    ? mon.getDate()+"-"+sat.getDate()+" "+MONF[mon.getMonth()]
+    : mon.getDate()+" "+MON[mon.getMonth()]+" - "+sat.getDate()+" "+MON[sat.getMonth()];
+
+  var dh="";
+  for(var i=0;i<6;i++){
+    var d=new Date(mon);d.setDate(d.getDate()+i);
+    var c=lessonsFor(d).length;
+    var cls="day"+(d.getTime()===sel.getTime()?" sel":"")+(d.getTime()===today.getTime()?" is-today":"");
+    dh+='<button class="'+cls+'" data-i="'+i+'" aria-label="'+DAYS[i]+', '+d.getDate()+'"><span class="dn">'+DSHORT[i]+'</span><span class="dd">'+d.getDate()+'</span><span class="cnt">'+(c?c+" п.":"·")+'</span></button>';
+  }
+  document.getElementById("days").innerHTML=dh;
+
+  var list=lessonsFor(sel), isToday=sel.getTime()===today.getTime();
+  var nm=now.getHours()*60+now.getMinutes();
+  var st=document.getElementById("status"); st.hidden=true;
+  if(isToday&&list.length){
+    var cur=null,nxt=null;
+    list.forEach(function(l){var s=toMin(PAIRS[l.p][0]),e=toMin(PAIRS[l.p][1]);if(nm>=s&&nm<e&&!cur)cur=l;if(s>nm&&!nxt)nxt=l;});
+    if(cur){st.textContent="Сейчас "+cur.p+" пара, до конца "+dur(toMin(PAIRS[cur.p][1])-nm);st.hidden=false;}
+    else if(nxt){st.textContent="Следующая пара через "+dur(toMin(PAIRS[nxt.p][0])-nm)+", ауд. "+(nxt.r||"не указана");st.hidden=false;}
+    else{st.textContent="Пары на сегодня закончились";st.hidden=false;}
+  }
+
+  var h="";
+  if(!list.length){
+    h='<div class="empty"><b>Пар нет</b>'+DAYS[(sel.getDay()+6)%7]+', '+sel.getDate()+' '+MONF[sel.getMonth()]+'</div>';
+  }else{
+    var prevP=null;
+    list.forEach(function(l){
+      if(prevP!==null&&l.p-prevP>1){
+        var g=toMin(PAIRS[l.p][0])-toMin(PAIRS[prevP][1]);
+        h+='<div class="gap">Окно '+dur(g)+'</div>';
+      }else if(prevP===2&&l.p===3){
+        h+='<div class="gap">Перерыв 12:25 - 12:55</div>';
+      }
+      prevP=l.p;
+      var s=toMin(PAIRS[l.p][0]),e=toMin(PAIRS[l.p][1]);
+      var isNow=isToday&&nm>=s&&nm<e, isPast=isToday&&nm>=e;
+      var tl=l.t==="lec"?'<span class="tag t-lec">Лекция</span>':l.t==="prac"?'<span class="tag t-prac">Практика</span>':'<span class="tag t-other">Другое</span>';
+      var wk=l.w==="all"?"":'<span class="tag t-wk">'+(l.w==="over"?"над чертой":"под чертой")+'</span>';
+      var nw="";
+      if(l.from){var fd=new Date(l.from+"T00:00");if((sel-fd)/864e5<14)nw='<span class="tag t-new">с '+fd.getDate()+' '+MON[fd.getMonth()]+'</span>';}
+      var prog="";
+      if(isNow){var pc=Math.round((nm-s)/(e-s)*100);prog='<div class="bar"><i style="width:'+pc+'%"></i></div><div class="left">Осталось '+dur(e-nm)+'</div>';}
+      h+='<article class="lesson'+(isNow?" now":"")+(isPast?" past":"")+'">'
+        +'<div class="time"><span class="pn">'+l.p+' пара</span><b>'+PAIRS[l.p][0]+'</b><span>'+PAIRS[l.p][1]+'</span></div>'
+        +'<div class="body"><div class="tags">'+tl+wk+nw+'</div>'
+        +'<p class="subj">'+esc(l.s)+'</p>'
+        +(l.tch?'<div class="who">'+esc(l.tch)+'</div>':'')
+        +(l.r?'<div class="room"><small>ауд. </small>'+esc(l.r)+'</div>':'')
+        +prog+'</div></article>';
+    });
+  }
+  document.getElementById("list").innerHTML=h;
+}
+
+document.getElementById("days").addEventListener("click",function(e){
+  var b=e.target.closest(".day");if(!b)return;
+  var d=mondayOf(sel);d.setDate(d.getDate()+ +b.dataset.i);sel=d;render();
+});
+document.getElementById("prev").onclick=function(){sel=new Date(sel);sel.setDate(sel.getDate()-7);render();};
+document.getElementById("next").onclick=function(){sel=new Date(sel);sel.setDate(sel.getDate()+7);render();};
+document.getElementById("toToday").onclick=function(){sel=day0(new Date());if(sel.getDay()===0)sel.setDate(sel.getDate()+1);render();};
+
+render();
+setInterval(function(){if(!document.hidden)render();},30000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)render();});
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+</script>
+</body>
+</html>
