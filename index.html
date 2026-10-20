@@ -586,7 +586,13 @@ function show(v){
   else{lastSel=null;renderFull();}
   window.scrollTo(0,0);
 }
-function refresh(){if(view==="home")renderHome(false);else renderFull();}
+var shownDay=studyDay(new Date()).getTime();
+function refresh(){
+  // наступил новый день: если смотрели «сегодня», переходим на новый сегодняшний день
+  var sd=studyDay(new Date()).getTime();
+  if(sd!==shownDay){if(sel.getTime()===shownDay)sel=new Date(sd);shownDay=sd;}
+  if(view==="home")renderHome(false);else renderFull();
+}
 
 // ---------- Окна ----------
 var MOTION=!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
