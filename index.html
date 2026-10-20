@@ -101,12 +101,34 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .bar2 .seg i{display:block;height:100%;background:var(--accent)}
 .bar2 .brk{background:transparent;outline:1px dashed var(--line);outline-offset:-1px}
 .bar2 .brk i{background:var(--muted)}
-.gapnow{border:1px dashed var(--accent);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
-.gapnow .gt{display:flex;justify-content:space-between;gap:10px;font-size:14px}
-.gapnow .gt b{color:var(--accent);font-weight:600;white-space:nowrap}
 .left{font-size:12px;color:var(--accent);font-weight:600}
 .gap{font-size:13px;color:var(--muted);text-align:center;padding:2px 0;display:flex;align-items:center;gap:10px}
 .gap::before,.gap::after{content:"";flex:1;border-top:1px dashed var(--line)}
+.gap.on{color:var(--accent);font-weight:600}
+.pm{display:grid;grid-template-columns:62px 1fr;gap:12px;align-items:center;padding:0 14px;font-size:12px;color:var(--muted);margin-block:-4px}
+.pm-l{font-family:var(--font-m);font-variant-numeric:tabular-nums}
+.pm.on{color:var(--accent);font-weight:600}
+.pm{position:relative;padding-block:6px;margin-block:-3px;border-radius:10px;overflow:hidden;border:1px dashed var(--line)}
+.pm.on{border:1px solid var(--accent)}
+.pm-l,.pm-t{position:relative}
+.pm-fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 14%,transparent)}
+.pm.on .pm-fill{background:var(--accent-soft)}
+.pm-bar{padding:0 14px 0 88px;margin-top:-6px}
+.big{display:flex;gap:12px;align-items:center;background:transparent;color:var(--muted);border:1px dashed var(--line);border-radius:16px;padding:12px 14px}
+
+.big-i{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--bg)}
+.big-i svg{width:20px;height:20px}
+.big-b{flex:1;min-width:0}
+.big-r{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.big-r b{font-weight:600;font-size:15px}
+.big-r span{font-size:13px;font-weight:600;white-space:nowrap}
+.big-s{font-family:var(--font-m);font-size:12px;opacity:.8}
+.big{position:relative;overflow:hidden}
+.big>*:not(.big-fill){position:relative}
+.big-fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 16%,transparent)}
+.big.on .big-fill{background:var(--other-soft)}
+.big.lit{color:var(--other);border-style:solid;border-color:transparent}
+.big.on{border-color:var(--other)}
 .empty{text-align:center;color:var(--muted);padding:40px 12px;background:var(--surface);border-radius:16px;border:1px solid var(--line)}
 .empty b{display:block;font-family:var(--font-d);font-weight:500;color:var(--fg);font-size:18px;margin-bottom:4px}
 
@@ -288,12 +310,25 @@ function markSvg(wt){
   return '<svg width="44" height="48" viewBox="0 0 44 48"><line x1="4" y1="24" x2="40" y2="24" stroke="var(--fg)" stroke-width="2.5" stroke-linecap="round"/><circle cx="22" cy="'+cy+'" r="6" fill="var(--accent)"/></svg>';
 }
 
-function gapHtml(label,gs,ge){
+var CUP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 3v3M12 3v3"/></svg>';
+function gapHtml(kind,gs,ge){
   var t=new Date(), m=t.getHours()*60+t.getMinutes();
   var on=sel.getTime()===day0(t).getTime()&&m>=gs&&m<ge;
-  if(!on)return '<div class="gap">'+label+'</div>';
-  var pc=Math.round((m-gs)/(ge-gs)*100);
-  return '<div class="gapnow"><div class="gt"><span>'+label+'</span><b>ещё '+dur(ge-m)+'</b></div><div class="bar"><i style="width:'+pc+'%"></i></div></div>';
+  var pc=on?Math.round((m-gs)/(ge-gs)*100):0;
+  var bar=on?'<div class="bar"><i style="width:'+pc+'%"></i></div>':'';
+  var fmt=function(x){return Math.floor(x/60)+":"+(x%60<10?"0":"")+x%60;};
+  if(kind==="small"){
+    var td0=day0(t).getTime(), sd0=sel.getTime();
+    var sp=sd0<td0?100:sd0>td0?0:Math.max(0,Math.min(100,(m-gs)/(ge-gs)*100));
+    return '<div class="pm'+(on?" on":"")+'"><span class="pm-fill" style="width:'+sp.toFixed(1)+'%"></span><span class="pm-l">'+dur(ge-gs)+'</span><span class="pm-t">'+(on?"Перерыв, ещё "+dur(ge-m):"Перерыв")+'</span></div>';
+  }
+  if(kind==="big"){
+    var td=day0(t).getTime(), sd=sel.getTime();
+    var bp=sd<td?100:sd>td?0:Math.max(0,Math.min(100,Math.round((m-gs)/(ge-gs)*100)));
+    bar='';
+    return '<div class="big'+(on?" on":"")+(on?" lit":"")+'"><span class="big-fill" style="width:'+bp+'%"></span><span class="big-i">'+CUP+'</span><div class="big-b"><div class="big-r"><b>Большой перерыв</b><span>'+(on?"ещё "+dur(ge-m):dur(ge-gs))+'</span></div><div class="big-s">'+fmt(gs)+' - '+fmt(ge)+'</div>'+bar+'</div></div>';
+  }
+  return '<div class="gap'+(on?" on":"")+'"><span>Окно '+dur(ge-gs)+(on?", ещё "+dur(ge-m):"")+'</span></div>'+(on?'<div class="pm-bar">'+bar+'</div>':'');
 }
 function render(){
   now=new Date();
@@ -336,9 +371,12 @@ function render(){
     list.forEach(function(l){
       if(prevP!==null&&l.p-prevP>1){
         var gs=toMin(PAIRS[prevP][1]), ge=toMin(PAIRS[l.p][0]);
-        h+=gapHtml("Окно "+dur(ge-gs),gs,ge);
+        h+=gapHtml("window",gs,ge);
       }else if(prevP===2&&l.p===3){
-        h+=gapHtml("Перерыв 12:25 - 12:55",toMin("12:25"),toMin("12:55"));
+        h+=gapHtml("big",toMin("12:25"),toMin("12:55"));
+      }else if(prevP!==null){
+        var ps=PAIRS[prevP][1], pe=PAIRS[l.p][0];
+        h+=gapHtml("small",toMin(ps),toMin(pe));
       }
       prevP=l.p;
       var s=toMin(PAIRS[l.p][0]),e=toMin(PAIRS[l.p][1]);
@@ -351,7 +389,7 @@ function render(){
         // пара: 45 мин, перерыв 5 мин, 45 мин
         var h1=s+45, h2=s+50;
         var f1=Math.min(1,(nm-s)/45), fb=nm<h1?0:Math.min(1,(nm-h1)/5), f2=nm<h2?0:(nm-h2)/(e-h2);
-        var txt=nm<h1?"До перерыва "+dur(h1-nm):nm<h2?"Перерыв 5 мин, ещё "+dur(h2-nm):"Осталось "+dur(e-nm);
+        var txt=nm<h1?"До перерыва "+dur(h1-nm):nm<h2?"Перерыв 5 мин, ещё "+dur(h2-nm):"До конца пары осталось "+dur(e-nm);
         prog='<div class="bar2"><span class="seg" style="flex:45"><i style="width:'+Math.round(f1*100)+'%"></i></span>'
           +'<span class="seg brk'+(nm>=h1&&nm<h2?" on":"")+'" style="flex:5"><i style="width:'+Math.round(fb*100)+'%"></i></span>'
           +'<span class="seg" style="flex:'+(e-h2)+'"><i style="width:'+Math.round(f2*100)+'%"></i></span></div>'
