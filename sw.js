@@ -1,5 +1,5 @@
 // Офлайн-режим: сначала сеть (чтобы приходили обновления), без сети берём из кэша
-var CACHE = "pary-e21-v22";
+var CACHE = "pary-e21-v23";
 var CORE = ["./", "index.html", "manifest.webmanifest", "icon.png"];
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CORE); }).then(function () { return self.skipWaiting(); }));

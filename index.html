@@ -227,6 +227,10 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
   .enter-up>*{animation:inUp .55s var(--ios) both;animation-delay:calc(var(--i,0)*40ms)}
   .cal-grid.slide-r{animation:inR .45s var(--ios) both}
   .cal-grid.slide-l{animation:inL .45s var(--ios) both}
+  @keyframes rowIn{from{background:transparent}}
+  @keyframes dayIn{from{transform:scale(.6);opacity:0}}
+  .cal-grid.flash .cal-wk.sel>*{animation:rowIn .5s var(--ios) both}
+  .cal-grid.flash .t span{animation:dayIn .5s var(--ios) both}
   .sheet:not([hidden]),.cdlg:not([hidden]){animation:fade .35s ease both}
   .sheet:not([hidden]) .panel{animation:sheetUp .5s var(--ios) both}
   .cdlg:not([hidden]) .cbox{animation:pop .35s var(--ios) both}
@@ -631,8 +635,8 @@ function renderCal(dir){
     h+='<button class="g" data-w="'+m.getTime()+'" aria-label="Неделя '+weekName(m)+'">'+glyph(weekType(m))+'</button></div>';
     m=addDays(m,7);
   }
-  var g=$("cgrid"); g.innerHTML=h; g.classList.remove("slide-r","slide-l");
-  if(dir){void g.offsetWidth;g.classList.add(dir>0?"slide-r":"slide-l");}
+  var g=$("cgrid"); g.innerHTML=h; g.classList.remove("slide-r","slide-l","flash");
+  if(dir){void g.offsetWidth;g.classList.add(dir==="flash"?"flash":dir>0?"slide-r":"slide-l");}
 }
 function pick(d){sel=d;closeSheet("wsheet");renderFull();}
 $("mark").innerHTML=I_CAL;
@@ -643,7 +647,8 @@ $("cnext").onclick=function(){goMonth(new Date(cMonth.getFullYear(),cMonth.getMo
 $("ctoday").onclick=function(){
   var sd=studyDay(new Date()), changed=mondayOf(sel).getTime()!==mondayOf(sd).getTime();
   if(changed)sel=sd;
-  goMonth(sd); if(!changed)renderCal(0);
+  var same=cMonth.getFullYear()===sd.getFullYear()&&cMonth.getMonth()===sd.getMonth();
+  if(same)renderCal("flash"); else goMonth(sd);
   if(changed)renderFull();
 };
 $("cgrid").addEventListener("click",function(e){
