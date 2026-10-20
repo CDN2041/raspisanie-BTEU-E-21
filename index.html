@@ -96,6 +96,14 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .room small{font-family:var(--font-b);color:var(--muted);font-size:12px}
 .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--accent)}
+.bar2{display:flex;gap:3px;margin-top:6px}
+.bar2 .seg{height:4px;border-radius:2px;background:var(--line);overflow:hidden;display:block}
+.bar2 .seg i{display:block;height:100%;background:var(--accent)}
+.bar2 .brk{background:transparent;outline:1px dashed var(--line);outline-offset:-1px}
+.bar2 .brk i{background:var(--muted)}
+.gapnow{border:1px dashed var(--accent);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.gapnow .gt{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.gapnow .gt b{color:var(--accent);font-weight:600;white-space:nowrap}
 .left{font-size:12px;color:var(--accent);font-weight:600}
 .gap{font-size:13px;color:var(--muted);text-align:center;padding:2px 0;display:flex;align-items:center;gap:10px}
 .gap::before,.gap::after{content:"";flex:1;border-top:1px dashed var(--line)}
@@ -280,6 +288,13 @@ function markSvg(wt){
   return '<svg width="44" height="48" viewBox="0 0 44 48"><line x1="4" y1="24" x2="40" y2="24" stroke="var(--fg)" stroke-width="2.5" stroke-linecap="round"/><circle cx="22" cy="'+cy+'" r="6" fill="var(--accent)"/></svg>';
 }
 
+function gapHtml(label,gs,ge){
+  var t=new Date(), m=t.getHours()*60+t.getMinutes();
+  var on=sel.getTime()===day0(t).getTime()&&m>=gs&&m<ge;
+  if(!on)return '<div class="gap">'+label+'</div>';
+  var pc=Math.round((m-gs)/(ge-gs)*100);
+  return '<div class="gapnow"><div class="gt"><span>'+label+'</span><b>ещё '+dur(ge-m)+'</b></div><div class="bar"><i style="width:'+pc+'%"></i></div></div>';
+}
 function render(){
   now=new Date();
   var today=day0(now), wt=weekType(sel), mon=mondayOf(sel), n=weeksBetween(today,sel);
@@ -320,10 +335,10 @@ function render(){
     var prevP=null;
     list.forEach(function(l){
       if(prevP!==null&&l.p-prevP>1){
-        var g=toMin(PAIRS[l.p][0])-toMin(PAIRS[prevP][1]);
-        h+='<div class="gap">Окно '+dur(g)+'</div>';
+        var gs=toMin(PAIRS[prevP][1]), ge=toMin(PAIRS[l.p][0]);
+        h+=gapHtml("Окно "+dur(ge-gs),gs,ge);
       }else if(prevP===2&&l.p===3){
-        h+='<div class="gap">Перерыв 12:25 - 12:55</div>';
+        h+=gapHtml("Перерыв 12:25 - 12:55",toMin("12:25"),toMin("12:55"));
       }
       prevP=l.p;
       var s=toMin(PAIRS[l.p][0]),e=toMin(PAIRS[l.p][1]);
@@ -332,7 +347,16 @@ function render(){
       var nw="";
       if(l.from&&l.from===key(sel)){var fd=new Date(l.from+"T00:00");nw='<span class="tag t-new">с '+fd.getDate()+' '+MON[fd.getMonth()]+'</span>';}
       var prog="";
-      if(isNow){var pc=Math.round((nm-s)/(e-s)*100);prog='<div class="bar"><i style="width:'+pc+'%"></i></div><div class="left">Осталось '+dur(e-nm)+'</div>';}
+      if(isNow){
+        // пара: 45 мин, перерыв 5 мин, 45 мин
+        var h1=s+45, h2=s+50;
+        var f1=Math.min(1,(nm-s)/45), fb=nm<h1?0:Math.min(1,(nm-h1)/5), f2=nm<h2?0:(nm-h2)/(e-h2);
+        var txt=nm<h1?"До перерыва "+dur(h1-nm):nm<h2?"Перерыв 5 мин, ещё "+dur(h2-nm):"Осталось "+dur(e-nm);
+        prog='<div class="bar2"><span class="seg" style="flex:45"><i style="width:'+Math.round(f1*100)+'%"></i></span>'
+          +'<span class="seg brk'+(nm>=h1&&nm<h2?" on":"")+'" style="flex:5"><i style="width:'+Math.round(fb*100)+'%"></i></span>'
+          +'<span class="seg" style="flex:'+(e-h2)+'"><i style="width:'+Math.round(f2*100)+'%"></i></span></div>'
+          +'<div class="left">'+txt+'</div>';
+      }
       var np=l.t==="prac"&&l.s!==FK, nk=key(sel)+"|"+l.p+"|"+l.s, hn=np&&!!notes[nk];
       h+='<article class="lesson'+(isNow?" now":"")+(isPast&&!hn?" past":"")+(hn?" has-note":"")+'">'
         +(np?'<button class="pen" data-k="'+esc(nk)+'" data-t="'+esc(l.s)+'" data-p="'+l.p+'" aria-label="'+(hn?"Открыть заметку":"Добавить заметку")+'">'+PEN+'</button>':'')
