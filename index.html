@@ -42,6 +42,7 @@ body{margin:0;-webkit-text-size-adjust:100%}
   --prac:#52CC9F; --prac-soft:#163A2F; --other:#E3BE6B; --other-soft:#3A2F17; --warn:#FF7A70; --note:#E8A94B; --note-soft:#21180A; color-scheme:dark}
 
 html,body{background:var(--bg)}
+:root{--live:var(--fg);--live-soft:color-mix(in srgb,var(--fg) 14%,transparent)}
 body{color:var(--fg);font-family:var(--font-b);font-size:15px;line-height:1.4;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   -webkit-tap-highlight-color:transparent}
@@ -76,7 +77,7 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .status{font-weight:600;font-size:14px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--accent)}
 .list{display:flex;flex-direction:column;gap:10px}
 .lesson{display:grid;grid-template-columns:62px 1fr;gap:12px;background:var(--surface);border-radius:16px;padding:14px;border:1px solid var(--line)}
-.lesson.now{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.lesson.now{border-color:var(--live);box-shadow:0 0 0 1px var(--live)}
 .lesson.past{opacity:.55}
 .time{display:flex;flex-direction:column;font-family:var(--font-m);font-variant-numeric:tabular-nums}
 .time .pn{font-size:11px;color:var(--muted);font-family:var(--font-b);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
@@ -95,24 +96,24 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .room{font-family:var(--font-m);font-size:13px}
 .room small{font-family:var(--font-b);color:var(--muted);font-size:12px}
 .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:6px}
-.bar i{display:block;height:100%;background:var(--other)}
+.bar i{display:block;height:100%;background:var(--live)}
 .bar2{display:flex;gap:3px;margin-top:6px}
 .bar2 .seg{height:4px;border-radius:2px;background:var(--line);overflow:hidden;display:block}
-.bar2 .seg i{display:block;height:100%;background:var(--other)}
+.bar2 .seg i{display:block;height:100%;background:var(--live)}
 .bar2 .brk{background:transparent;outline:1px dashed var(--line);outline-offset:-1px}
-.bar2 .brk i{background:var(--other)}
-.left{font-size:12px;color:var(--other);font-weight:600}
+.bar2 .brk i{background:var(--live)}
+.left{font-size:12px;color:var(--live);font-weight:600}
 .gap{font-size:13px;color:var(--muted);text-align:center;padding:2px 0;display:flex;align-items:center;gap:10px}
 .gap::before,.gap::after{content:"";flex:1;border-top:1px dashed var(--line)}
-.gap.on{color:var(--other);font-weight:600}
+.gap.on{color:var(--live);font-weight:600}
 .pm{display:grid;grid-template-columns:62px 1fr;gap:12px;align-items:center;padding:0 14px;font-size:12px;color:var(--muted);margin-block:-4px}
 .pm-l{font-family:var(--font-m);font-variant-numeric:tabular-nums}
-.pm.on{color:var(--other);font-weight:600}
+.pm.on{color:var(--live);font-weight:600}
 .pm{position:relative;padding-block:6px;margin-block:-3px;border-radius:10px;overflow:hidden;border:1px dashed var(--line)}
-.pm.on{border:1px solid var(--other)}
+.pm.on{border:1px solid var(--live)}
 .pm-l,.pm-t{position:relative}
 .pm-fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 14%,transparent)}
-.pm.on .pm-fill{background:var(--other-soft)}
+.pm.on .pm-fill{background:var(--live-soft)}
 .pm-bar{padding:0 14px 0 88px;margin-top:-6px}
 .big{display:flex;gap:12px;align-items:center;background:transparent;color:var(--muted);border:1px dashed var(--line);border-radius:16px;padding:12px 14px}
 
@@ -126,9 +127,9 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .big{position:relative;overflow:hidden}
 .big>*:not(.big-fill){position:relative}
 .big-fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--muted) 16%,transparent)}
-.big.on .big-fill{background:var(--other-soft)}
-.big.lit{color:var(--other);border-style:solid;border-color:transparent}
-.big.on{border-color:var(--other)}
+.big.on .big-fill{background:var(--live-soft)}
+.big.lit{color:var(--live);border-style:solid;border-color:transparent}
+.big.on{border-color:var(--live)}
 .empty{text-align:center;color:var(--muted);padding:40px 12px;background:var(--surface);border-radius:16px;border:1px solid var(--line)}
 .empty b{display:block;font-family:var(--font-d);font-weight:500;color:var(--fg);font-size:18px;margin-bottom:4px}
 
