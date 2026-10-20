@@ -238,7 +238,7 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
   .sheet.closing .panel{animation:sheetDown .3s var(--ios) both}
   .cdlg.closing{animation:fadeOut .25s ease both}
   .cdlg.closing .cbox{animation:popOut .25s ease both}
-  .h-state.live i{animation:pulse 1.6s ease-in-out infinite}
+  .h-state.live i{animation:pulse 1.6s ease-in-out 3}
   .bar i,.bar2 i,.fill{transition:width 1s var(--ios)}
   .day{transition:box-shadow .3s var(--ios),background-color .3s var(--ios)}
   button{transition:transform .3s var(--ios),background-color .2s ease,opacity .2s ease}
@@ -701,10 +701,13 @@ $("toToday").onclick=function(){sel=studyDay(new Date());renderFull();};
 applyTheme();
 show(settings.ui==="old"?"full":"home");
 function quiet(){return document.querySelectorAll(".sheet:not([hidden])").length===0;}
-(function tick(){ // обновление ровно в начале каждой минуты
-  setTimeout(function(){if(!document.hidden&&quiet())refresh();tick();},60000-Date.now()%60000+200);
-})();
-document.addEventListener("visibilitychange",function(){if(!document.hidden&&quiet())refresh();});
+// Таймер работает только пока приложение на экране, ровно в начале каждой минуты
+var timer=null;
+function tick(){clearTimeout(timer);if(document.hidden)return;
+  timer=setTimeout(function(){if(quiet())refresh();tick();},60000-Date.now()%60000+200);}
+tick();
+document.addEventListener("visibilitychange",function(){if(document.hidden){clearTimeout(timer);return;}if(quiet())refresh();tick();});
+
 })();
 </script>
 <script>
