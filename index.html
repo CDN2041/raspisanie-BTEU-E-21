@@ -73,10 +73,10 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .day .dd{font-family:var(--font-m);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:color-mix(in srgb,var(--fg) 75%,transparent)}
 .day .cnt{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .day.is-today .dd,.day.is-today .dn,.day.sel .dd{color:var(--fg)}
-.day.sel::after{content:"";position:absolute;left:28%;right:28%;bottom:-3px;height:2px;border-radius:2px;background:var(--fg)}
+.day.sel{box-shadow:inset 0 0 0 1.5px var(--fg)}
 .day.has-note{background:var(--note-soft)}
 .day.has-note .dd,.day.has-note .dn,.day.has-note .cnt{color:var(--note)}
-.day.has-note.sel::after{background:var(--note)}
+.day.has-note.sel{box-shadow:inset 0 0 0 1.5px var(--note)}
 
 /* Карточка пары */
 .list{display:flex;flex-direction:column;gap:10px}
@@ -217,7 +217,6 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
   @keyframes fade{from{opacity:0}}
   @keyframes sheetUp{from{transform:translateY(100%)}}
   @keyframes pop{from{opacity:0;transform:scale(.94)}}
-  @keyframes grow{from{transform:scaleX(0)}}
   @keyframes pulse{50%{opacity:.25}}
   .enter-r>*{animation:inR .32s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
   .enter-l>*{animation:inL .32s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
@@ -225,7 +224,6 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
   .sheet:not([hidden]),.cdlg:not([hidden]){animation:fade .2s ease both}
   .sheet:not([hidden]) .panel{animation:sheetUp .32s cubic-bezier(.2,.8,.2,1) both}
   .cdlg:not([hidden]) .cbox{animation:pop .22s cubic-bezier(.2,.8,.2,1) both}
-  .day.sel::after{animation:grow .25s cubic-bezier(.2,.8,.2,1) both}
   .h-state.live i{animation:pulse 1.6s ease-in-out infinite}
   .bar i,.bar2 i,.fill{transition:width .8s ease}
   button{transition:transform .12s ease,background-color .15s ease}
@@ -602,7 +600,7 @@ function renderCal(){
   var today=day0(new Date()), first=new Date(cMonth.getFullYear(),cMonth.getMonth(),1), m=mondayOf(first), sm=mondayOf(sel).getTime();
   $("wt").textContent=MONN[first.getMonth()]+" "+first.getFullYear();
   var h=["Пн","Вт","Ср","Чт","Пт","Сб","Вс",""].map(function(x){return '<div class="h">'+x+'</div>';}).join("");
-  while(m.getMonth()===first.getMonth()||m<first){
+  for(var r=0;r<6;r++){
     h+='<div class="cal-wk'+(m.getTime()===sm?" sel":"")+'">';
     for(var i=0;i<7;i++){
       var d=addDays(m,i), c=(d.getMonth()!==first.getMonth()?"o ":"")+(i===6?"sun ":"")+(d.getTime()===today.getTime()?"t ":"")+(d.getTime()===sel.getTime()?"s ":"")+(dayHasNote(d)?"n":"");
