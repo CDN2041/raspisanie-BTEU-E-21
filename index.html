@@ -389,7 +389,7 @@ function render(){
         // пара: 45 мин, перерыв 5 мин, 45 мин
         var h1=s+45, h2=s+50;
         var f1=Math.min(1,(nm-s)/45), fb=nm<h1?0:Math.min(1,(nm-h1)/5), f2=nm<h2?0:(nm-h2)/(e-h2);
-        var txt=nm<h1?"До перерыва "+dur(h1-nm):nm<h2?"Перерыв 5 мин, ещё "+dur(h2-nm):"До конца пары осталось "+dur(e-nm);
+        var txt=nm<h1?"До перерыва "+dur(h1-nm):nm<h2?"До конца перерыва "+dur(h2-nm):"До конца пары осталось "+dur(e-nm);
         prog='<div class="bar2"><span class="seg" style="flex:45"><i style="width:'+Math.round(f1*100)+'%"></i></span>'
           +'<span class="seg brk'+(nm>=h1&&nm<h2?" on":"")+'" style="flex:5"><i style="width:'+Math.round(fb*100)+'%"></i></span>'
           +'<span class="seg" style="flex:'+(e-h2)+'"><i style="width:'+Math.round(f2*100)+'%"></i></span></div>'
