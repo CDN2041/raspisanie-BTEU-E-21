@@ -564,9 +564,7 @@ function renderHome(anim){
     if(nd){
       var dd=Math.round((nd-td)/864e5);
       var lbl=dd===1?"Завтра":dd===2?"Послезавтра":WHEN[nd.getDay()]+", "+nd.getDate()+" "+MONF[nd.getMonth()];
-      var more=dd===1?"Ещё завтра":dd===2?"Ещё послезавтра":"Ещё "+WHEN[nd.getDay()].toLowerCase();
       h+=sec(lbl+", первая в "+PAIRS[nl[0].p][0])+lessonHead(nl[0])+noteBlock(nl[0],nd);
-      if(nl.length>1)h+=sec(more,rows(nl.slice(1),nd));
     }
   }
   h+='<button class="h-all" data-act="all">'+I_CAL+'Всё расписание</button>';
