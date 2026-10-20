@@ -208,7 +208,6 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px}
 .seg button{border-radius:9px;padding:10px 4px;font-size:14px;font-weight:500;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:600}
-.set small{color:var(--muted);font-size:13px}
 
 /* Анимации */
 @media (prefers-reduced-motion: no-preference){
@@ -276,7 +275,6 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
     <div class="set">
       <span>При открытии</span>
       <div class="seg" id="s-ui"><button data-v="new">Экран «Сейчас»</button><button data-v="old">Всё расписание</button></div>
-      <small id="s-ui-h"></small>
     </div>
     <div class="set">
       <span>Тема</span>
@@ -640,7 +638,6 @@ function paintSettings(){
   [["s-ui",settings.ui],["s-theme",settings.theme]].forEach(function(p){
     Array.prototype.forEach.call($(p[0]).children,function(b){b.setAttribute("aria-pressed",b.dataset.v===p[1]?"true":"false");});
   });
-  $("s-ui-h").textContent=settings.ui==="new"?"Сначала текущая пара и сколько до конца, полное расписание по кнопке.":"Сразу открывается полное расписание недели, как раньше.";
 }
 $("s-ui").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
   settings.ui=b.dataset.v; save(SKEY,settings); paintSettings(); $("toHome").hidden=settings.ui==="old";
