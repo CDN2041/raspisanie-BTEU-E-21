@@ -50,7 +50,9 @@ h2{font-family:var(--font-d);font-weight:500;font-size:18px;margin:0;line-height
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:600}
 .tabs{position:sticky;top:0;z-index:5;background:var(--surface)}
 input,select{font-size:16px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px;width:100%;box-sizing:border-box;min-width:0}
-input[type=date],input[type=time]{font-family:var(--font-m);min-height:46px}
+/* iOS Safari рисует поля даты и времени шире контейнера: сбрасываем системный вид и ширину */
+input[type=date],input[type=time]{font-family:var(--font-m);min-height:46px;-webkit-appearance:none;appearance:none;display:block;max-width:100%;text-align:left}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
 .field{display:flex;flex-direction:column;gap:6px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{border-radius:12px;padding:12px 14px;font-weight:600;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:6px}
@@ -62,7 +64,8 @@ input[type=date],input[type=time]{font-family:var(--font-m);min-height:46px}
 .actions{display:flex;gap:10px;flex-wrap:wrap}
 .actions .btn{flex:1}
 .dnav{display:flex;align-items:center;gap:6px}
-.dnav input{flex:1;text-align:center}
+.dnav input{flex:1;min-width:0;width:auto;text-align:center}
+.dnav input::-webkit-date-and-time-value{text-align:center}
 .nb{width:44px;height:46px;border-radius:12px;font-size:22px;color:var(--muted);flex:none;border:1px solid var(--line);background:var(--surface)}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .tag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
@@ -111,7 +114,9 @@ input[type=date],input[type=time]{font-family:var(--font-m);min-height:46px}
 .bell:first-of-type{border-top:0;padding-top:0}
 .bh,.bsub{display:flex;justify-content:space-between;align-items:center;min-height:36px}
 .bh b{font-family:var(--font-m);font-size:15px}
-.brow{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:8px;align-items:center}
+.brow{display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.brow input{text-align:center}
+.brow input::-webkit-date-and-time-value{text-align:center}
 .brow>span{color:var(--muted);font-size:14px}
 .psearch{position:sticky;top:-18px;z-index:2;background:var(--surface);padding:6px 0;margin:-6px 0}
 .lc.pc{grid-template-columns:1fr;padding:12px 14px}
