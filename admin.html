@@ -147,7 +147,6 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .ok{font-size:14px;border:1px solid var(--fg);border-radius:12px;padding:10px 12px}
 a.btn{text-decoration:none;color:inherit}
 .steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
-.panel::before{content:"";flex:none;width:36px;height:5px;border-radius:3px;background:var(--line);align-self:center;margin:-8px 0 0}
 code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5px;border-radius:6px}
 @media (prefers-reduced-motion: no-preference){
   @keyframes fade{from{opacity:0}}
@@ -202,7 +201,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 35</footer>
+  <footer class="ver">v 36</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -780,27 +779,6 @@ function hideLayer(el){
   el._t=setTimeout(function(){el.hidden=true;el.classList.remove("closing");var p=el.querySelector(".panel");if(p){p.style.transform="";p.style.transition="";}},300);
 }
 function closeForm(){hideLayer($("fsheet"));formSave=formDel=null;ced=null;pickCur=null;}
-// Смахнуть окно вниз, чтобы закрыть (когда оно прокручено к началу)
-(function(){
-  var sh=$("fsheet"), panel=$("fpanel"), y0=null, dy=0, t0=0;
-  panel.addEventListener("touchstart",function(e){
-    if(e.target.closest("input,textarea,select")||panel.scrollTop>0){y0=null;return;}
-    y0=e.touches[0].clientY; dy=0; t0=Date.now(); panel.style.transition="none";
-  },{passive:true});
-  panel.addEventListener("touchmove",function(e){
-    if(y0===null)return;
-    var d=e.touches[0].clientY-y0;
-    if(panel.scrollTop>0){y0=null;panel.style.transform="";return;}
-    dy=d>0?d:0; panel.style.transform=dy?"translateY("+dy+"px)":"";
-  },{passive:true});
-  function end(){
-    if(y0===null)return;
-    var v=dy/Math.max(1,Date.now()-t0); y0=null;
-    if(dy>110||(v>.5&&dy>30))closeForm();
-    else{panel.style.transition="transform .4s var(--ios)";panel.style.transform="";}
-  }
-  panel.addEventListener("touchend",end); panel.addEventListener("touchcancel",end);
-})();
 $("fsheet").addEventListener("click",function(e){
   if(e.target.id==="fsheet"||e.target.id==="fcancel"){closeForm();return;}
   var sb=e.target.closest(".seg button");
