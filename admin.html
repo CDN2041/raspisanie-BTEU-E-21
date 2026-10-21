@@ -34,7 +34,8 @@ button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .ico{width:20px;height:20px;display:block;flex:none}
-.app{max-width:640px;margin:0 auto;padding:18px 0 120px;display:flex;flex-direction:column;gap:16px}
+.app{max-width:640px;margin:0 auto;padding:18px 0 120px;display:flex;flex-direction:column;gap:16px;overflow-x:clip}
+.app>*,.card>*{min-width:0}
 .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .back{display:flex;align-items:center;gap:2px;color:var(--muted);font-weight:600;padding:6px 8px 6px 0;text-decoration:none}
 .who{font-size:12px;color:var(--muted);text-align:right}
@@ -53,7 +54,8 @@ input,select{font-size:16px;background:var(--bg);border:1px solid var(--line);bo
 /* iOS Safari рисует поля даты и времени шире контейнера: сбрасываем системный вид и ширину */
 input[type=date],input[type=time]{font-family:var(--font-m);min-height:46px;-webkit-appearance:none;appearance:none;display:block;max-width:100%;text-align:left}
 input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
-.field{display:flex;flex-direction:column;gap:6px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>*{min-width:0;max-width:100%}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{border-radius:12px;padding:12px 14px;font-weight:600;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.primary{background:var(--fg);color:var(--bg)}
@@ -134,7 +136,7 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .savebar span{flex:1;font-size:13px;color:var(--muted)}
 .toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;max-width:calc(100% - 40px);box-sizing:border-box;text-align:center}
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)}
-.panel{background:var(--surface);width:100%;max-width:560px;max-height:90%;overflow:auto;border-radius:20px 20px 0 0;box-sizing:border-box;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px;
+.panel{background:var(--surface);width:100%;max-width:560px;max-height:90%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;border-radius:20px 20px 0 0;box-sizing:border-box;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px;
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .cdlg{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding-inline:24px}
 .cbox{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:340px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
