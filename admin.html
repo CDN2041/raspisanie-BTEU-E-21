@@ -202,7 +202,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 34</footer>
+  <footer class="ver">v 35</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -262,7 +262,7 @@ function weekType(d){
   return even?a:(a==="under"?"over":"under");
 }
 function baseFor(d){ // постоянное расписание на дату, без замен
-  var wd=(d.getDay()+6)%7; if(wd>5||d>pd(data.end))return {};
+  var wd=(d.getDay()+6)%7; if(wd>5||d>pd(data.end)||(data.start&&d<pd(data.start)))return {};
   var wt=weekType(d), by={}, k=key(d);
   data.lessons.forEach(function(l){if(l.d===wd&&(l.w==="all"||l.w===wt)&&(!l.from||k>=l.from))by[l.p]=l;});
   return by;
@@ -290,7 +290,8 @@ function uniq(f){
 // Порядок полей и вид файла: одна пара на строку, чтобы в истории GitHub было видно, что поменялось
 function clean(x){
   function pick(o,ks){var r={};ks.forEach(function(k){if(o[k]!==undefined&&o[k]!==""&&o[k]!==null&&o[k]!==false)r[k]=o[k];});return r;}
-  var out={updated:x.updated||0,anchor:x.anchor,anchorType:x.anchorType,end:x.end,bells:x.bells.map(function(b){return b[2]&&b[3]?[normTime(b[0]),normTime(b[1]),normTime(b[2]),normTime(b[3])]:[normTime(b[0]),normTime(b[1])];})};
+  var out={updated:x.updated||0,anchor:x.anchor,anchorType:x.anchorType,start:x.start||undefined,end:x.end,bells:x.bells.map(function(b){return b[2]&&b[3]?[normTime(b[0]),normTime(b[1]),normTime(b[2]),normTime(b[3])]:[normTime(b[0]),normTime(b[1])];})};
+  if(!out.start)delete out.start;
   out.lessons=x.lessons.map(function(l){return pick(l,["d","p","w","s","t","tch","r","from"]);})
     .sort(function(a,b){return a.d-b.d||a.p-b.p||(a.w>b.w?1:a.w<b.w?-1:0);});
   out.changes={};
@@ -335,6 +336,8 @@ function validate(){
     }
   }
   if(!DATE_RE.test(data.end||""))return "Укажите последний день занятий";
+  if(data.start&&!DATE_RE.test(data.start))return "Первый день занятий указан неверно";
+  if(data.start&&data.start>data.end)return "Первый день занятий позже последнего";
   if(!DATE_RE.test(data.anchor||""))return "Укажите, какая сейчас неделя";
   for(i=0;i<data.lessons.length;i++){
     var l=data.lessons[i];
@@ -638,6 +641,7 @@ function rGen(){
   h+='<div class="card"><span class="lbl">Текущая неделя, '+mon.getDate()+'-'+fri.getDate()+' '+MONF[fri.getMonth()]+'</span>'
     +'<div class="seg"><button data-a="wk" data-v="over" aria-pressed="'+(wt==="over")+'">Над чертой</button><button data-a="wk" data-v="under" aria-pressed="'+(wt==="under")+'">Под чертой</button></div>'
     +'<span class="muted small">Дальше недели чередуются сами.</span></div>';
+  h+='<div class="card"><span class="lbl">Первый день занятий</span><input type="date" id="gstart" value="'+esc(data.start||"")+'"><span class="muted small">Раньше этой даты пар нет, и календарь в приложении назад дальше не листается.</span></div>';
   h+='<div class="card"><span class="lbl">Последний день занятий</span><input type="date" id="gend" value="'+esc(data.end)+'"><span class="muted small">После этой даты пары не показываются (замены и сессия показываются), и календарь в приложении дальше не листается.</span></div>';
   h+='<div class="card"><span class="lbl">Звонки</span>';
   data.bells.forEach(function(b,i){
@@ -834,6 +838,7 @@ document.addEventListener("change",function(e){
   if(el.id==="dday"&&DATE_RE.test(el.value)){dsel=el.value;render();}
   else if(el.id==="wday"&&DATE_RE.test(el.value)){setWdate(el.value);render();}
   else if(el.id==="gend"&&DATE_RE.test(el.value)){data.end=el.value;dirty();}
+  else if(el.id==="gstart"){data.start=DATE_RE.test(el.value)?el.value:"";dirty();}
   else if(el.dataset.bell!==undefined&&el.value){data.bells[+el.dataset.bell][+el.dataset.e]=normTime(el.value);dirty();}
 });
 // Карточки открываются и с клавиатуры

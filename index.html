@@ -69,6 +69,7 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .range{flex:1;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
 .today{height:36px;padding:0 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-weight:600}
 .days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.day.off{opacity:.25}
 .day{position:relative;border-radius:12px;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .day .dn{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .day .dd{font-family:var(--font-m);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:color-mix(in srgb,var(--fg) 75%,transparent)}
@@ -289,7 +290,7 @@ a.btn[aria-busy="true"]{opacity:.6;pointer-events:none}
     <nav class="days" id="days"></nav>
     <section class="list" id="list"></section>
   </section>
-  <footer class="ver">v 34</footer>
+  <footer class="ver">v 35</footer>
 </div>
 
 <div class="sheet" id="wsheet" hidden>
@@ -353,7 +354,7 @@ var KGEN={exam:"экзамена",credit:"зачёта",consult:"консуль�
 var KSHORT={exam:"экз.",credit:"зач.",consult:"конс.",other:"соб."};
 
 // Заполняются из schedule.json в prepare()
-var ANCHOR,ANCHOR_T,LAST,END_ALL,PAIRS,BYDAY,CHANGES,SESSION,LASTM;
+var ANCHOR,ANCHOR_T,LAST,END_ALL,PAIRS,BYDAY,CHANGES,SESSION,LASTM,FIRST,FIRSTM;
 
 // ---------- Справочники ----------
 var DSHORT=["Пн","Вт","Ср","Чт","Пт","Сб"];
@@ -394,6 +395,8 @@ function valid(x){
 }
 function prepare(x){
   ANCHOR=pd(x.anchor); ANCHOR_T=x.anchorType==="over"?"over":"under"; LAST=pd(x.end);
+  // Первый день занятий: раньше него пар нет и календарь не листается
+  FIRST=DATE_RE.test(x.start||"")?pd(x.start):null; FIRSTM=FIRST&&new Date(FIRST.getFullYear(),FIRST.getMonth(),1);
   PAIRS=[null].concat(x.bells);
   // Пятиминутка внутри пары задаётся в звонках явно: [начало, конец, начало перерыва, конец перерыва]
   function fill(l){var b=PAIRS[l.p];l.a=toMin(b[0]);l.b=toMin(b[1]);l.h1=b[2]&&b[3]?toMin(b[2]):null;l.h2=l.h1!==null?toMin(b[3]):null;return l;}
@@ -427,7 +430,7 @@ function lessonsFor(d){
 }
 function buildDay(d,k){
   var wd=(d.getDay()+6)%7, ch=CHANGES[k], list=[], wt;
-  if(wd<6&&d<=LAST){wt=weekType(d);list=BYDAY[wd].filter(function(l){return (l.w==="all"||l.w===wt)&&(!l.from||k>=l.from);});}
+  if(wd<6&&d<=LAST&&!beforeStart(d)){wt=weekType(d);list=BYDAY[wd].filter(function(l){return (l.w==="all"||l.w===wt)&&(!l.from||k>=l.from);});}
   if(!ch)return list;
   var by={};
   list.forEach(function(l){by[l.p]=l;});
@@ -536,6 +539,7 @@ function itemCard(it,cmp){
 
 function renderFull(){
   if(afterEnd(sel))sel=lastDay();
+  if(beforeStart(sel))sel=firstDay();
   var t=new Date(), today=day0(t), m=nowMin(t), mon=mondayOf(sel), n=weeksBetween(studyDay(t),sel), nd=Math.min(daysIn(mon),Math.round((day0(END_ALL)-mon)/864e5)+1);
   $("rel").textContent=n===0?"эта неделя":n===1?"следующая неделя":n===-1?"прошлая неделя":n>1?"через "+n+" нед.":(-n)+" нед. назад";
   $("wtitle").textContent=weekInSession(mon)?"Сессия":weekType(sel)==="over"?"Над чертой":"Под чертой";
@@ -545,12 +549,13 @@ function renderFull(){
   for(var i=0;i<nd;i++){
     var d=addDays(mon,i), c=active(lessonsFor(d)).length, its=itemsFor(d);
     var lbl=c?c+" п.":its.length?KSHORT[its[0].kind]:"·";
-    dh+='<button class="day'+(d.getTime()===sel.getTime()?" sel":"")+(d.getTime()===today.getTime()?" is-today":"")+(dayHasNote(d)?" has-note":"")
+    dh+='<button'+(beforeStart(d)?' disabled':'')+' class="day'+(beforeStart(d)?" off":"")+(d.getTime()===sel.getTime()?" sel":"")+(d.getTime()===today.getTime()?" is-today":"")+(dayHasNote(d)?" has-note":"")
       +'" data-i="'+i+'" aria-label="'+DAYS_FULL[d.getDay()]+', '+d.getDate()+'"><span class="dn">'+DSHORT[i]+'</span><span class="dd">'+d.getDate()+'</span><span class="cnt">'+lbl+'</span></button>';
   }
   $("days").style.gridTemplateColumns="repeat("+nd+",1fr)";
   $("days").innerHTML=dh;
   $("next").disabled=afterEnd(addDays(mon,7));
+  $("prev").disabled=beforeStart(addDays(mon,-1));
 
   var list=lessonsFor(sel), its2=itemsFor(sel), cmp=sel<today?-1:sel>today?1:0, h="";
   if(!list.length&&!its2.length){
@@ -668,8 +673,10 @@ function show(v){
 }
 var shownDay=0;
 function afterEnd(d){return d>END_ALL;}
+function beforeStart(d){return !!FIRST&&d<FIRST;}
+function firstDay(){return studyDay(FIRST);}
 function lastDay(){var d=day0(END_ALL);while(!inStrip(d))d=addDays(d,-1);return d;}
-function normSel(){if(!inStrip(sel))sel=(sel.getDay()===6)?addDays(sel,-1):studyDay(sel);if(afterEnd(sel))sel=lastDay();}
+function normSel(){if(!inStrip(sel))sel=(sel.getDay()===6)?addDays(sel,-1):studyDay(sel);if(afterEnd(sel))sel=lastDay();if(beforeStart(sel))sel=firstDay();}
 function refresh(force){
   if(!view)return;
   // наступил новый день: если смотрели «сегодня», переходим на новый сегодняшний день
@@ -741,23 +748,24 @@ function renderCal(dir){
   var today=day0(new Date()), first=new Date(cMonth.getFullYear(),cMonth.getMonth(),1), m=mondayOf(first), sm=mondayOf(sel).getTime();
   $("wt").textContent=MONN[first.getMonth()]+" "+first.getFullYear();
   $("cnext").disabled=first>=LASTM;
+  $("cprev").disabled=!!FIRSTM&&first<=FIRSTM;
   var h=["Пн","Вт","Ср","Чт","Пт","Сб","Вс",""].map(function(x){return '<div class="h">'+x+'</div>';}).join("");
   for(var r=0;r<6;r++){
     h+='<div class="cal-wk'+(m.getTime()===sm?" sel":"")+'">';
     for(var i=0;i<7;i++){
-      var d=addDays(m,i), c=(afterEnd(d)?"off ":"")+(d.getMonth()!==first.getMonth()?"o ":"")+(i===6?"sun ":"")+(d.getTime()===today.getTime()?"t ":"")+(d.getTime()===sel.getTime()?"s ":"")+(dayHasNote(d)?"n ":"")+(itemsFor(d).length?"x":"");
+      var d=addDays(m,i), c=(afterEnd(d)||beforeStart(d)?"off ":"")+(d.getMonth()!==first.getMonth()?"o ":"")+(i===6?"sun ":"")+(d.getTime()===today.getTime()?"t ":"")+(d.getTime()===sel.getTime()?"s ":"")+(dayHasNote(d)?"n ":"")+(itemsFor(d).length?"x":"");
       h+='<button class="'+c+'" data-t="'+d.getTime()+'" aria-label="'+d.getDate()+' '+MONF[d.getMonth()]+'"><span>'+d.getDate()+'</span></button>';
     }
-    h+='<button class="g'+(afterEnd(m)?" off":"")+'" data-w="'+m.getTime()+'" aria-label="Неделя '+weekName(m)+'">'+glyph(weekType(m))+'</button></div>';
+    h+='<button class="g'+(afterEnd(m)||beforeStart(addDays(m,6))?" off":"")+'" data-w="'+m.getTime()+'" aria-label="Неделя '+weekName(m)+'">'+glyph(weekType(m))+'</button></div>';
     m=addDays(m,7);
   }
   var g=$("cgrid"); g.innerHTML=h; g.classList.remove("slide-r","slide-l","flash");
   if(dir){void g.offsetWidth;g.classList.add(dir==="flash"?"flash":dir>0?"slide-r":"slide-l");}
 }
-function pick(d){if(afterEnd(d))return;sel=d;closeSheet("wsheet");renderFull();}
+function pick(d){if(afterEnd(d))return;if(beforeStart(d))d=firstDay();sel=d;closeSheet("wsheet");renderFull();}
 $("mark").innerHTML=I_CAL;
 // Календарь не листается дальше месяца, в котором кончается учёба (занятия или сессия)
-function monthOf(d){var n=new Date(d.getFullYear(),d.getMonth(),1);return n>LASTM?new Date(LASTM):n;}
+function monthOf(d){var n=new Date(d.getFullYear(),d.getMonth(),1);return n>LASTM?new Date(LASTM):FIRSTM&&n<FIRSTM?new Date(FIRSTM):n;}
 $("mark").onclick=function(){cMonth=monthOf(sel);renderCal();openSheet("wsheet");};
 function goMonth(d){var n=monthOf(d), dir=n-cMonth; cMonth=n; renderCal(dir>0?1:dir<0?-1:0);}
 $("cprev").onclick=function(){goMonth(new Date(cMonth.getFullYear(),cMonth.getMonth()-1,1));};
@@ -844,7 +852,7 @@ $("days").addEventListener("click",function(e){
 });
 // Свайп влево и вправо по списку пар листает дни
 var swiping=false;
-function shiftDay(n){var d=addDays(sel,n);while(!inStrip(d))d=addDays(d,n);if(afterEnd(d))return;sel=d;renderFull();}
+function shiftDay(n){var d=addDays(sel,n);while(!inStrip(d))d=addDays(d,n);if(afterEnd(d)||beforeStart(d))return;sel=d;renderFull();}
 (function(){
   var el=$("list"), x0=null, y0=0, dx=0, lock=null;
   el.addEventListener("touchstart",function(e){swiping=true;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;el.style.transition="none";},{passive:true});
