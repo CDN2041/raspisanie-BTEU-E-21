@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Редактор расписания</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Админка: те же цвета и шрифты, что у приложения */
+:root{
+  --bg:#EDEFF3; --surface:#FFFFFF; --fg:#141821; --muted:#646C7E; --line:#D7DBE4;
+  --warn:#B4231B; --note:#A86A12; --note-soft:#FBF0DC;
+  --font-d:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-b:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --ios:cubic-bezier(.32,.72,0,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#050608; --surface:#101318; --fg:#E8EBF1; --muted:#8B93A5; --line:#1F242D;
+  --warn:#FF7A70; --note:#E8A94B; --note-soft:#21180A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#050608; --surface:#101318; --fg:#E8EBF1; --muted:#8B93A5; --line:#1F242D;
+  --warn:#FF7A70; --note:#E8A94B; --note-soft:#21180A; color-scheme:dark}
+html,body{background:var(--bg);margin:0}
+body{color:var(--fg);font-family:var(--font-b);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.ico{width:20px;height:20px;display:block;flex:none}
+.app{max-width:640px;margin:0 auto;padding:18px 0 120px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.back{display:flex;align-items:center;gap:2px;color:var(--muted);font-weight:600;padding:6px 8px 6px 0;text-decoration:none}
+.who{font-size:12px;color:var(--muted);text-align:right}
+h1{font-family:var(--font-d);font-weight:700;font-size:26px;line-height:1.1;margin:0}
+h2{font-family:var(--font-d);font-weight:500;font-size:18px;margin:0;line-height:1.25}
+.eyebrow,.lbl{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px}
+.card .seg{background:var(--bg)}
+.seg button{border-radius:9px;padding:9px 4px;font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:600}
+.tabs{position:sticky;top:0;z-index:5;background:var(--surface)}
+input,select{font-size:16px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px;width:100%;box-sizing:border-box;min-width:0}
+input[type=date],input[type=time]{font-family:var(--font-m);min-height:46px}
+.field{display:flex;flex-direction:column;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border-radius:12px;padding:12px 14px;font-weight:600;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--fg);color:var(--bg)}
+.btn.ghost{background:var(--surface);border:1px solid var(--line)}
+.btn.danger{color:var(--warn);border:1px solid var(--line);background:var(--surface)}
+.btn.sm{padding:7px 10px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.4;cursor:default}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.dnav{display:flex;align-items:center;gap:6px}
+.dnav input{flex:1;text-align:center}
+.nb{width:44px;height:46px;border-radius:12px;font-size:22px;color:var(--muted);flex:none;border:1px solid var(--line);background:var(--surface)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.tag.on{border-color:var(--fg);color:var(--fg)}
+.tag.solid{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tap{display:block;width:100%;text-align:left}
+.cards{display:flex;flex-direction:column;gap:10px}
+.lc{position:relative;display:grid;grid-template-columns:62px 1fr;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;width:100%;box-sizing:border-box}
+.lc[role="button"]{cursor:pointer}
+.lc[role="button"]:active{transform:scale(.99)}
+.lc.add{border-style:dashed;background:transparent;color:var(--muted);align-items:center}
+/* отменённая пара: карточка затемнена, а кнопка «Вернуть пару» остаётся яркой */
+.lc.cancel{background:color-mix(in srgb,var(--surface) 35%,var(--bg));border-style:dashed}
+.lc.cancel .lt,.lc.cancel .tags,.lc.cancel .ls,.lc.cancel .lm,.lc.cancel .lr{opacity:.55}
+.lc.cancel .ls{text-decoration:line-through}
+.lc.subst{border-color:var(--fg)}
+.lt{display:flex;flex-direction:column;font-family:var(--font-m);font-variant-numeric:tabular-nums}
+.lt small{font-family:var(--font-b);font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.lt b{font-size:17px}
+.lt span{font-size:13px;color:var(--muted)}
+.lb{min-width:0;display:flex;flex-direction:column;gap:4px}
+.lc[role="button"] .lb{padding-right:30px}
+.ls{font-weight:600;font-size:16px;line-height:1.3;margin:0;overflow-wrap:anywhere}
+.lm{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.lr{font-family:var(--font-m);font-size:13px}
+.lr small{font-family:var(--font-b);color:var(--muted);font-size:12px}
+.was{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.lc .pen{position:absolute;top:10px;right:10px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted)}
+.lc .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.addl{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--fg)}
+.mini{border:1px dashed var(--line);border-radius:12px;padding:10px;color:var(--muted);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:-4px}
+.mini .ico{width:16px;height:16px}
+.tap-card{justify-content:space-between;text-align:left;padding:16px}
+.tap-card>span:first-child{display:flex;flex-direction:column;gap:2px}
+.chev{font-size:24px;color:var(--muted);line-height:1}
+.seg.wrap{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;box-sizing:border-box}
+.seg.wrap button{flex:none;font-family:var(--font-m);font-size:14px;padding:9px 16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:2px;font-family:var(--font-m);font-size:14px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:6px 6px 6px 10px}
+.chip:not(:has(button)){padding-right:10px}
+.chip button{width:24px;height:24px;display:grid;place-items:center;color:var(--muted)}
+.chip .ico{width:14px;height:14px}
+.addrow{display:flex;gap:8px}
+.addrow .btn{flex:none}
+.bell{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+.bell:first-of-type{border-top:0;padding-top:0}
+.bh,.bsub{display:flex;justify-content:space-between;align-items:center;min-height:36px}
+.bh b{font-family:var(--font-m);font-size:15px}
+.brow{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:8px;align-items:center}
+.brow>span{color:var(--muted);font-size:14px}
+.psearch{position:sticky;top:-18px;z-index:2;background:var(--surface);padding:6px 0;margin:-6px 0}
+.lc.pc{grid-template-columns:1fr;padding:12px 14px}
+.lc.pc .ls{font-size:15px}
+.list-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.empty{color:var(--muted);text-align:center;padding:18px 8px}
+.ch{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.ch:first-child{border-top:0}
+.ch .b{flex:1;min-width:0}
+.ch .d{font-weight:600}
+.x{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--muted);flex:none}
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;justify-content:center;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.savebar>div{max-width:640px;width:100%;display:flex;gap:10px;align-items:center}
+.savebar span{flex:1;font-size:13px;color:var(--muted)}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;max-width:calc(100% - 40px);box-sizing:border-box;text-align:center}
+.sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)}
+.panel{background:var(--surface);width:100%;max-width:560px;max-height:90%;overflow:auto;border-radius:20px 20px 0 0;box-sizing:border-box;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.cdlg{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding-inline:24px}
+.cbox{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:340px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+.cbox b{font-size:17px}
+.cbox p{margin:0 0 8px;color:var(--muted);font-size:14px}
+.err{color:var(--warn);font-size:14px;border:1px solid var(--warn);border-radius:12px;padding:10px 12px}
+.ok{font-size:14px;border:1px solid var(--fg);border-radius:12px;padding:10px 12px}
+a.btn{text-decoration:none;color:inherit}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5px;border-radius:6px}
+@media (prefers-reduced-motion: no-preference){
+  @keyframes fade{from{opacity:0}}
+  @keyframes up{from{transform:translateY(100%)}}
+  @keyframes pop{from{opacity:0;transform:scale(1.06)}}
+  @keyframes inUp{from{opacity:0;transform:translateY(8px)}}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,-10px)}}
+  .sheet:not([hidden]),.cdlg:not([hidden]){animation:fade .3s ease both}
+  .sheet:not([hidden]) .panel{animation:up .45s var(--ios) both}
+  .cdlg:not([hidden]) .cbox{animation:pop .3s var(--ios) both}
+  .toast{animation:toastIn .35s var(--ios) both}
+  #main>*{animation:inUp .4s var(--ios) both}
+  button{transition:transform .25s var(--ios),opacity .2s ease}
+  button:active{transform:scale(.97);transition-duration:.08s}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="back" href="./"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>К расписанию</a>
+    <div class="who" id="who"></div>
+  </div>
+  <h1>Редактор</h1>
+
+  <section id="login" class="card" hidden>
+    <h2>Вход</h2>
+    <p class="muted small" style="margin:0">Нужен ключ доступа GitHub от аккаунта, которому открыт репозиторий расписания. Ключ сохранится только на этом устройстве.</p>
+    <ol class="steps">
+      <li>Войдите на github.com со своего аккаунта.</li>
+      <li>Откройте <code>Settings → Developer settings → Personal access tokens → Tokens (classic)</code>.</li>
+      <li>Нажмите <b>Generate new token (classic)</b>, отметьте только <code>public_repo</code>, срок можно поставить «No expiration».</li>
+      <li>Скопируйте ключ (начинается с <code>ghp_</code>) и вставьте сюда.</li>
+    </ol>
+    <a class="btn ghost" id="mktok" target="_blank" rel="noopener">Создать ключ на GitHub</a>
+    <input id="tok" type="password" placeholder="ghp_..." autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="err" id="lerr" role="alert" hidden></div>
+    <div class="ok" id="lok" role="status" hidden></div>
+    <button class="btn primary" id="lbtn">Войти</button>
+  </section>
+
+  <section id="work" hidden>
+    <div class="seg tabs" id="tabs">
+      <button data-v="days">Дни</button><button data-v="week">Неделя</button><button data-v="sess">Сессия</button><button data-v="gen">Общее</button>
+    </div>
+    <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
+  </section>
+</div>
+
+<div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
+
+<div class="sheet" id="fsheet" hidden><div class="panel" role="dialog" aria-labelledby="ftitle" id="fpanel"></div></div>
+
+<div class="cdlg" id="cdlg" hidden>
+  <div class="cbox" role="alertdialog" aria-labelledby="ctl">
+    <b id="ctl"></b><p id="ctx"></p>
+    <div class="actions"><button class="btn ghost" id="cno">Отмена</button><button class="btn primary" id="cyes">Да</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+// Админка пишет schedule.json в репозиторий через GitHub API, сайт пересобирается сам.
+// В демо (не на github.io) изменения сохраняются только в этом браузере как черновик.
+var REPO="CDN2041/raspisanie-BTEU-E-21", PATH="schedule.json";
+var API="https://api.github.com/repos/"+REPO+"/contents/"+PATH;
+var DEMO=!/\.github\.io$/.test(location.hostname);
+var TOKEN_KEY="pary-e21-admin-token", DRAFT_KEY="pary-e21-draft-v1", CACHE_KEY="pary-e21-schedule-v1", SKEY="pary-settings-v1";
+var TYPES={lec:"Лекция",prac:"Практика",mix:"Лекция/Практика"};
+var WEEKS={all:"Каждую",over:"Над чертой",under:"Под чертой"};
+var KINDS={exam:"Экзамен",credit:"Зачёт",consult:"Консультация",other:"Другое"};
+var DSHORT=["Пн","Вт","Ср","Чт","Пт","Сб"];
+var DFULL=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+var MONS=["янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
+var MONF=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+var I_X='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,v);}catch(e){}}
+function day0(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function mondayOf(d){return addDays(day0(d),-((d.getDay()+6)%7));}
+function key(d){var m=d.getMonth()+1,dd=d.getDate();return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(dd<10?"0":"")+dd;}
+function pd(s){var a=String(s).split("-");return new Date(+a[0],a[1]-1,+a[2]);}
+function toMin(t){var a=String(t).split(":");return a[0]*60+ +a[1];}
+function fmtMin(x){return Math.floor(x/60)+":"+(x%60<10?"0":"")+x%60;}
+function normTime(t){return t?String(t).replace(/^0(\d)/,"$1"):"";}
+function padTime(t){return t?(String(t).length===4?"0"+t:t):"";}
+function dlabel(k){var d=pd(k);return DFULL[d.getDay()]+", "+d.getDate()+" "+MONF[d.getMonth()];}
+function sdate(k){var d=pd(k);return DSHORT[(d.getDay()+6)%7]||"Вс";}
+var DATE_RE=/^\d{4}-\d\d-\d\d$/;
+
+// Тема как в приложении
+(function(){var s=null;try{s=JSON.parse(lsGet(SKEY));}catch(e){}if(s&&(s.theme==="dark"||s.theme==="light"))document.documentElement.setAttribute("data-theme",s.theme);})();
+
+// ---------- Данные ----------
+var data=null, base="", sha=null, token=null, tab="days";
+function weekType(d){
+  var w=Math.round((mondayOf(d)-mondayOf(pd(data.anchor)))/864e5/7), even=((w%2)+2)%2===0, a=data.anchorType==="over"?"over":"under";
+  return even?a:(a==="under"?"over":"under");
+}
+function baseFor(d){ // постоянное расписание на дату, без замен
+  var wd=(d.getDay()+6)%7; if(wd>5||d>pd(data.end))return {};
+  var wt=weekType(d), by={}, k=key(d);
+  data.lessons.forEach(function(l){if(l.d===wd&&(l.w==="all"||l.w===wt)&&(!l.from||k>=l.from))by[l.p]=l;});
+  return by;
+}
+function changesOn(k){return (data.changes&&data.changes[k])||[];}
+function changeOf(k,p){var a=changesOn(k);for(var i=0;i<a.length;i++)if(a[i].p===p)return a[i];return null;}
+function setChange(k,p,obj){
+  data.changes=data.changes||{};
+  var a=changesOn(k).filter(function(c){return c.p!==p;});
+  if(obj)a.push(obj);
+  a.sort(function(x,y){return x.p-y.p;});
+  if(a.length)data.changes[k]=a; else delete data.changes[k];
+  dirty();
+}
+function short(l){return l?(l.s+(l.tch?", "+l.tch:"")):"";}
+function uniq(f){
+  var set={},out=[];
+  function add(v){v=(v||"").trim();if(v&&!set[v]){set[v]=1;out.push(v);}}
+  data.lessons.forEach(function(l){add(f(l));});
+  for(var k in data.changes||{})data.changes[k].forEach(function(c){if(!c.cancel)add(f(c));});
+  if(data.session)(data.session.items||[]).forEach(function(i){add(f(i));});
+  return out.sort(function(a,b){return a.localeCompare(b,"ru");});
+}
+
+// Порядок полей и вид файла: одна пара на строку, чтобы в истории GitHub было видно, что поменялось
+function clean(x){
+  function pick(o,ks){var r={};ks.forEach(function(k){if(o[k]!==undefined&&o[k]!==""&&o[k]!==null&&o[k]!==false)r[k]=o[k];});return r;}
+  var out={updated:x.updated||0,anchor:x.anchor,anchorType:x.anchorType,end:x.end,bells:x.bells.map(function(b){return b[2]&&b[3]?[normTime(b[0]),normTime(b[1]),normTime(b[2]),normTime(b[3])]:[normTime(b[0]),normTime(b[1])];})};
+  out.lessons=x.lessons.map(function(l){return pick(l,["d","p","w","s","t","tch","r","from"]);})
+    .sort(function(a,b){return a.d-b.d||a.p-b.p||(a.w>b.w?1:a.w<b.w?-1:0);});
+  out.changes={};
+  Object.keys(x.changes||{}).sort().forEach(function(k){
+    var a=x.changes[k].map(function(c){return c.cancel?pick(c,["p","cancel","was"]):pick(c,["p","s","t","tch","r","was"]);});
+    if(a.length)out.changes[k]=a;
+  });
+  // Справочник карточек пар: то, что админ создал сам (карточки из расписания добавляются автоматически)
+  out.cards=(x.cards||[]).map(function(k){return {s:k.s,tch:k.tch||"",r:splitR(k.r)};})
+    .sort(function(a,b){return a.s.localeCompare(b.s,"ru")||a.tch.localeCompare(b.tch,"ru");});
+  out.session=x.session?{from:x.session.from,to:x.session.to,items:(x.session.items||[]).map(function(i){return pick(i,["date","time","kind","s","tch","r"]);})
+    .sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:toMin(a.time)-toMin(b.time);})}:null;
+  return out;
+}
+function ser(o){
+  var J=JSON.stringify, L=["{"], ks=Object.keys(o);
+  function arr(ind,name,v,c){L.push(ind+J(name)+": [");v.forEach(function(x,j){L.push(ind+"  "+J(x)+(j<v.length-1?",":""));});L.push(ind+"]"+c);}
+  ks.forEach(function(k,i){
+    var v=o[k], c=i<ks.length-1?",":"";
+    if(Array.isArray(v)&&v.length)arr("  ",k,v,c);
+    else if(v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length){
+      L.push("  "+J(k)+": {"); var k2=Object.keys(v);
+      k2.forEach(function(kk,j){var vv=v[kk],c2=j<k2.length-1?",":"";
+        if(Array.isArray(vv)&&vv.length&&typeof vv[0]==="object")arr("    ",kk,vv,c2); else L.push("    "+J(kk)+": "+J(vv)+c2);});
+      L.push("  }"+c);
+    }else L.push("  "+J(k)+": "+J(v)+c);
+  });
+  L.push("}"); return L.join("\n")+"\n";
+}
+function body(x){var c=clean(x);c.updated=0;return ser(c);} // для сравнения без отметки времени
+
+function validate(){
+  var b=data.bells, i;
+  if(!b.length)return "Нужна хотя бы одна пара в звонках";
+  for(i=0;i<b.length;i++){
+    if(!/^\d{1,2}:\d\d$/.test(b[i][0]||"")||!/^\d{1,2}:\d\d$/.test(b[i][1]||""))return "Звонки: заполните время "+(i+1)+" пары";
+    if(toMin(b[i][0])>=toMin(b[i][1]))return "Звонки: "+(i+1)+" пара заканчивается раньше, чем начинается";
+    if(i&&toMin(b[i][0])<toMin(b[i-1][1]))return "Звонки: "+(i+1)+" пара начинается раньше конца "+i+"-й";
+    if(b[i].length>2){
+      if(!/^\d{1,2}:\d\d$/.test(b[i][2]||"")||!/^\d{1,2}:\d\d$/.test(b[i][3]||""))return "Звонки: заполните время пятиминутки "+(i+1)+" пары";
+      if(!(toMin(b[i][0])<toMin(b[i][2])&&toMin(b[i][2])<toMin(b[i][3])&&toMin(b[i][3])<toMin(b[i][1])))return "Звонки: пятиминутка "+(i+1)+" пары должна быть внутри пары";
+    }
+  }
+  if(!DATE_RE.test(data.end||""))return "Укажите последний день занятий";
+  if(!DATE_RE.test(data.anchor||""))return "Укажите, какая сейчас неделя";
+  for(i=0;i<data.lessons.length;i++){
+    var l=data.lessons[i];
+    if(!b[l.p-1])return DSHORT[l.d]+": "+l.p+" пары нет в звонках";
+    if(!l.s)return DSHORT[l.d]+", "+l.p+" пара: не указан предмет";
+    for(var j=i+1;j<data.lessons.length;j++){var o=data.lessons[j];
+      if(o.d===l.d&&o.p===l.p&&(o.w===l.w||o.w==="all"||l.w==="all"))return DSHORT[l.d]+", "+l.p+" пара: две пары в одно время";}
+  }
+  for(var k in data.changes||{})for(i=0;i<data.changes[k].length;i++)if(!b[data.changes[k][i].p-1])return dlabel(k)+": такой пары нет в звонках";
+  var s=data.session;
+  if(s){
+    if(!DATE_RE.test(s.from||"")||!DATE_RE.test(s.to||""))return "Сессия: укажите даты начала и конца";
+    if(s.from>s.to)return "Сессия: конец раньше начала";
+  }
+  return "";
+}
+
+// ---------- Сохранение ----------
+function dirty(){
+  var d=body(data)!==base;
+  $("savebar").hidden=!d;
+  render();
+}
+function b64dec(s){var bin=atob(s.replace(/\s/g,"")),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u);}
+function b64enc(str){var u=new TextEncoder().encode(str),bin="";for(var i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(bin);}
+function api(method,payload){
+  return fetch(method==="GET"?API+"?ref=main":API,{method:method,cache:"no-store",
+    headers:{"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json"},
+    body:payload?JSON.stringify(payload):undefined})
+  .then(function(r){return r.json().catch(function(){return {};}).then(function(j){
+    if(!r.ok){var e=new Error(j.message||("Ошибка "+r.status));e.status=r.status;throw e;}return j;});});
+}
+function setData(x){
+  data=x; if(!data.changes)data.changes={}; if(data.session===undefined)data.session=null;
+  base=body(data); $("savebar").hidden=true; render();
+}
+function save(){
+  var err=validate(); if(err){toast(err);return;}
+  data.updated=Date.now();
+  var text=ser(clean(data));
+  if(DEMO){
+    lsSet(DRAFT_KEY,text); setData(JSON.parse(text));
+    toast("Сохранено в демо. Расписание уже обновилось");
+    return;
+  }
+  var sb=$("savebtn"); sb.disabled=true; sb.textContent="Сохраняю";
+  api("PUT",{message:"Update",content:b64enc(text),sha:sha,branch:"main"}).then(function(j){
+    sha=j.content&&j.content.sha;
+    lsSet(CACHE_KEY,JSON.stringify(JSON.parse(text))); // у самого админа приложение обновится сразу
+    setData(JSON.parse(text));
+    toast("Сохранено. У всех обновится через 1-2 минуты");
+  }).catch(function(e){
+    toast(e.status===409||e.status===422?"Файл успел поменяться. Обновите страницу и повторите":e.status===401||e.status===403||e.status===404?"Нет прав на запись. Проверьте ключ":"Не сохранилось: "+e.message);
+  }).then(function(){sb.disabled=false;sb.textContent="Сохранить";});
+}
+$("savebtn").onclick=save;
+$("undo").onclick=function(){ask("Отменить изменения?","Всё, что не сохранено, вернётся как было.",function(){setData(JSON.parse(ser(clean(JSON.parse(base)))));});};
+window.addEventListener("beforeunload",function(e){if(data&&body(data)!==base){e.preventDefault();e.returnValue="";}});
+
+// ---------- Вход и загрузка ----------
+// ---------- Проверка ключа ----------
+// 1) похоже ли на ключ GitHub вообще; 2) настоящий ли он; 3) есть ли у аккаунта право записи в репозиторий; 4) есть ли у ключа право public_repo
+var TOKEN_RE=/^(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})$/;
+function checkToken(t){
+  if(!TOKEN_RE.test(t))return Promise.reject(new Error("Это не ключ GitHub. Ключ начинается с ghp_ и состоит из латинских букв и цифр. Скопируйте его целиком."));
+  var H={"Authorization":"Bearer "+t,"Accept":"application/vnd.github+json"};
+  return fetch("https://api.github.com/repos/"+REPO,{headers:H,cache:"no-store"}).then(function(r){
+    if(r.status===401)throw new Error("Ключ неверный или уже удалён на GitHub. Создайте новый.");
+    if(!r.ok)throw new Error("GitHub не дал доступ к репозиторию (ошибка "+r.status+"). Проверьте ключ.");
+    var scopes=r.headers.get("X-OAuth-Scopes");
+    return r.json().then(function(j){
+      var p=j.permissions||{};
+      if(!(p.push||p.admin||p.maintain))throw new Error("Ключ настоящий, но у этого аккаунта нет доступа к редактору: его нет в соавторах репозитория. Попросите владельца добавить вас.");
+      if(scopes!==null&&t.indexOf("ghp_")===0&&!/(^|,\s*)(public_repo|repo)(\s*,|$)/.test(scopes))throw new Error("У ключа не отмечено право public_repo, сохранять он не сможет. Создайте ключ заново кнопкой выше.");
+      return fetch("https://api.github.com/user",{headers:H,cache:"no-store"}).then(function(u){return u.ok?u.json():{};}).then(function(u){return {login:u.login||""};});
+    });
+  },function(e){if(e&&e.message&&/ключ|GitHub|админ|право/i.test(e.message))throw e;throw new Error("Нет связи с GitHub. Проверьте интернет и попробуйте ещё раз.");});
+}
+$("mktok").href="https://github.com/settings/tokens/new?scopes=public_repo&description="+encodeURIComponent("Редактор расписания Е-21");
+function loginError(msg){$("lok").hidden=true;$("lerr").hidden=false;$("lerr").textContent=msg;}
+
+// В демо после проверки ключа расписание берётся из черновика или schedule.json, сохраняется тоже в черновик
+function loadDemo(){
+  var d=null;try{d=JSON.parse(lsGet(DRAFT_KEY));}catch(e){}
+  if(d&&d.bells){showWork();setData(d);return Promise.resolve();}
+  return fetch("schedule.json",{cache:"no-cache"}).then(function(r){return r.json();}).then(function(x){showWork();setData(x);})
+    .catch(function(){$("main").innerHTML='<div class="card err">Не удалось загрузить schedule.json</div>';showWork();});
+}
+// Сначала всегда проверка ключа, редактирование открывается только после неё (и на сайте, и в демо)
+function start(){
+  token=lsGet(TOKEN_KEY);
+  if(!token){$("login").hidden=false;return;}
+  $("who").textContent="Проверяю ключ";
+  // Ключ проверяется при каждом входе: если человека убрали из соавторов, админка закроется
+  checkToken(token).then(function(u){
+    $("who").textContent=(u.login?"Вы: @"+u.login:"")+(DEMO?" · демо":"");
+    if(DEMO)return loadDemo();
+    return api("GET").then(function(j){sha=j.sha; showWork(); setData(JSON.parse(b64dec(j.content)));});
+  }).catch(function(e){
+    $("who").textContent="";
+    if(/Нет связи/.test(e.message)){$("main").innerHTML='<div class="card err">'+esc(e.message)+'</div>';showWork();return;}
+    lsSet(TOKEN_KEY,null); $("work").hidden=true; $("login").hidden=false; loginError(e.message);
+  });
+}
+function showWork(){$("login").hidden=true;$("work").hidden=false;paintTabs();}
+$("lbtn").onclick=function(){
+  var t=$("tok").value.trim();
+  if(!t){loginError("Вставьте ключ");return;}
+  $("lbtn").disabled=true; $("lerr").hidden=true; $("lok").hidden=true; $("lbtn").textContent="Проверяю";
+  checkToken(t).then(function(u){
+    $("lok").hidden=false;$("lok").textContent="Ключ подходит"+(u.login?": @"+u.login:"")+". Открываю редактор";
+    lsSet(TOKEN_KEY,t); setTimeout(function(){location.reload();},500);
+  }).catch(function(e){loginError(e.message);})
+  .then(function(){$("lbtn").disabled=false;$("lbtn").textContent="Войти";});
+};
+$("tok").addEventListener("keydown",function(e){if(e.key==="Enter")$("lbtn").click();});
+$("tok").addEventListener("input",function(){$("lerr").hidden=true;$("lok").hidden=true;});
+
+// ---------- Вкладки ----------
+function paintTabs(){Array.prototype.forEach.call($("tabs").children,function(b){b.setAttribute("aria-pressed",b.dataset.v===(tab==="cards"?"gen":tab)?"true":"false");});}
+$("tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.v;paintTabs();render();window.scrollTo(0,0);});
+function render(){
+  if(!data)return;
+  var h=tab==="days"?rDays():tab==="week"?rWeek():tab==="sess"?rSess():tab==="cards"?rCards():rGen();
+  $("main").innerHTML=h;
+  if(tab==="cards")paintCards();
+}
+function tagT(t){return t?'<span class="tag'+(t==="prac"?" solid":" on")+'">'+TYPES[t]+'</span>':"";}
+function lessonLines(l){return '<span class="s">'+esc(l.s)+'</span><span class="m">'+esc([l.tch,l.r?"ауд. "+l.r:""].filter(Boolean).join(" · "))+'</span>';}
+var I_PEN='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+var I_PLUS='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+// Карточка пары в том же виде, что в приложении. tap: атрибуты для открытия редактирования по нажатию
+function lcard(o){
+  var l=o.l;
+  return '<article class="lc'+(o.cls||"")+'"'+(o.tap?' role="button" tabindex="0" '+o.tap:'')+'>'
+    +'<div class="lt"><small>'+o.top+'</small><b>'+o.t1+'</b><span>'+(o.t2||"")+'</span></div>'
+    +'<div class="lb"><div class="tags">'+(o.tags||"")+'</div><p class="ls">'+esc(l.s)+'</p>'
+    +(l.tch?'<div class="lm">'+esc(l.tch)+'</div>':'')+(l.r?'<div class="lr"><small>ауд. </small>'+esc(l.r)+'</div>':'')
+    +(o.extra||"")+(o.acts?'<div class="acts">'+o.acts+'</div>':'')+'</div>'
+    +(o.tap?'<span class="pen" aria-hidden="true">'+I_PEN+'</span>':'')+'</article>';
+}
+function addCard(top,t1,t2,attrs,text,sub){
+  return '<button class="lc add" '+attrs+'><div class="lt"><small>'+top+'</small><b>'+t1+'</b><span>'+(t2||"")+'</span></div>'
+    +'<div class="lb"><span class="addl">'+I_PLUS+text+'</span>'+(sub?'<span class="lm">'+sub+'</span>':'')+'</div></button>';
+}
+
+// --- Дни: замены и отмены ---
+var dsel=(function(){var d=day0(new Date());while(d.getDay()===0)d=addDays(d,1);return key(d);})();
+function rDays(){
+  var d=pd(dsel), by=baseFor(d);
+  var info=d.getDay()===0?"Воскресенье":(d>pd(data.end)?"после конца занятий":(weekType(d)==="over"?"над чертой":"под чертой"));
+  var h='<div class="card"><div class="dnav"><button class="nb" data-a="dprev" aria-label="Предыдущий день">‹</button><input type="date" id="dday" value="'+dsel+'"><button class="nb" data-a="dnext" aria-label="Следующий день">›</button></div>'
+    +'<div class="list-h"><b>'+dlabel(dsel)+'</b><span class="muted small">'+info+'</span></div></div><div class="cards">';
+  data.bells.forEach(function(bl,i){
+    var p=i+1, b=by[p], c=changeOf(dsel,p), P=' data-p="'+p+'"', top=p+" пара";
+    if(c&&c.cancel&&b)h+=lcard({l:b,top:top,t1:bl[0],t2:bl[1],cls:" cancel",tags:tagT(b.t)+'<span class="tag">Отменена</span>',
+      acts:'<button class="btn ghost sm" data-a="restore"'+P+'>Вернуть пару</button>'});
+    else if(c&&!c.cancel)h+=lcard({l:c,top:top,t1:bl[0],t2:bl[1],cls:" subst",tags:tagT(c.t)+'<span class="tag on">'+(b?"Замена":"Доп. пара")+'</span>',
+      extra:(b||c.was?'<div class="was">Вместо: '+esc(c.was||short(b))+'</div>':''),
+      acts:'<button class="btn ghost sm" data-a="sub"'+P+'>Другая пара</button><button class="btn ghost sm" data-a="restore"'+P+'>'+(b?"Вернуть как было":"Убрать")+'</button>'});
+    else if(b)h+=lcard({l:b,top:top,t1:bl[0],t2:bl[1],tags:tagT(b.t),
+      acts:'<button class="btn ghost sm" data-a="sub"'+P+'>Заменить</button><button class="btn ghost sm" data-a="cancel"'+P+'>Отменить</button>'});
+    else h+=addCard(top,bl[0],bl[1],'data-a="sub"'+P,"Добавить пару","Свободно");
+  });
+  h+='</div>';
+  // Все замены и отмены
+  var ks=Object.keys(data.changes||{}).sort(), today=key(new Date()), past=ks.filter(function(k){return k<today;}).length;
+  h+='<div class="card"><div class="list-h"><h2>Все изменения</h2>'+(past?'<button class="btn ghost sm" data-a="clrpast">Убрать прошедшие</button>':'')+'</div>';
+  if(!ks.length)h+='<div class="empty">Замен и отмен нет</div>';
+  ks.forEach(function(k){
+    data.changes[k].forEach(function(c){
+      var b=baseFor(pd(k))[c.p];
+      h+='<div class="ch'+(k<today?" muted":"")+'"><div class="b"><button class="tap" data-a="goto" data-k="'+k+'"><div class="d">'+sdate(k)+', '+pd(k).getDate()+' '+MONF[pd(k).getMonth()]+' · '+c.p+' пара</div>'
+        +'<div class="small muted">'+(c.cancel?"Отмена: "+esc(short(b)||c.was||""):(b?"Замена: ":"Доп. пара: ")+esc(c.s)+(c.tch?", "+esc(c.tch):""))+'</div></button></div>'
+        +'<button class="x" data-a="delch" data-k="'+k+'" data-p="'+c.p+'" aria-label="Удалить">'+I_X+'</button></div>';
+    });
+  });
+  return h+'</div>';
+}
+
+// --- Постоянное расписание: карточка на каждую пару, пустые места можно заполнить ---
+// Дата выбирается по календарю, неделя (над или под чертой) определяется по ней сама
+var wdate=dsel, wday=(pd(wdate).getDay()+6)%7;
+function setWdate(k){var d=pd(k);if(d.getDay()===0)d=addDays(d,1);wdate=key(d);wday=(d.getDay()+6)%7;}
+function fromTagA(l){return l.from?'<span class="tag">с '+pd(l.from).getDate()+' '+MONS[pd(l.from).getMonth()]+'</span>':'';}
+function rWeek(){
+  var d=pd(wdate), wt=weekType(d), mon=mondayOf(d);
+  var h='<div class="card"><div class="dnav"><button class="nb" data-a="wprev" aria-label="Предыдущая неделя">‹</button><input type="date" id="wday" value="'+wdate+'"><button class="nb" data-a="wnext" aria-label="Следующая неделя">›</button></div>'
+    +'<div class="list-h"><b>'+DFULL[d.getDay()]+', '+d.getDate()+' '+MONF[d.getMonth()]+'</b><span class="tag solid">'+WEEKS[wt]+'</span></div>'
+    +'<div class="seg" id="wdays">'+DSHORT.map(function(n,i){var x=addDays(mon,i);return '<button data-a="wday" data-k="'+key(x)+'" aria-pressed="'+(i===wday)+'">'+n+' '+x.getDate()+'</button>';}).join("")+'</div></div><div class="cards">';
+  data.bells.forEach(function(bl,bi){
+    var p=bi+1, top=p+" пара";
+    var all=data.lessons.map(function(l,i){return {l:l,i:i};}).filter(function(x){return x.l.d===wday&&x.l.p===p;});
+    var arr=all.filter(function(x){return x.l.w==="all"||x.l.w===wt;});
+    if(!arr.length){
+      var sw=all.length?wt:"all"; // если в этом месте стоит пара на другую неделю, новая будет только на эту
+      h+=addCard(top,bl[0],bl[1],'data-a="addl" data-p="'+p+'" data-w="'+sw+'"',"Добавить пару",sw==="all"?"Свободно":"Свободно, только "+WEEKS[wt].toLowerCase());
+      return;
+    }
+    arr.forEach(function(x){
+      var l=x.l, later=l.from&&l.from>wdate;
+      h+=lcard({l:l,top:top,t1:bl[0],t2:bl[1],cls:later?" cancel":"",tap:'data-a="editl" data-i="'+x.i+'"',
+        tags:tagT(l.t)+(l.w!=="all"?'<span class="tag on">'+WEEKS[l.w]+'</span>':'')+fromTagA(l),
+        extra:later?'<div class="was">В этот день ещё не идёт</div>':''});
+    });
+  });
+  return h+'</div><button class="btn primary" data-a="addl">Новая пара</button>'
+    +'<p class="muted small" style="margin:0">Здесь постоянное расписание. Выберите любой день, и покажутся пары этого дня недели на его неделю (над или под чертой). Нажмите на карточку, чтобы изменить пару. Разовые изменения на конкретный день делайте во вкладке «Дни».</p>';
+}
+
+// --- Сессия ---
+function rSess(){
+  var s=data.session;
+  if(!s)return '<div class="card"><h2>Сессии нет</h2><p class="muted small" style="margin:0">Добавьте период сессии, потом экзамены, зачёты и консультации. В приложении они появятся в своих днях, а на экране «Сейчас» будет отсчёт до ближайшего.</p><button class="btn primary" data-a="addsess">Добавить сессию</button></div>';
+  var h='<div class="card"><div class="list-h"><h2>Сессия</h2><button class="btn ghost sm" data-a="editsess">Изменить даты</button></div>'
+    +'<div>'+(s.from&&s.to?"С "+pd(s.from).getDate()+" "+MONF[pd(s.from).getMonth()]+" по "+pd(s.to).getDate()+" "+MONF[pd(s.to).getMonth()]:'<span class="err">Укажите даты</span>')+'</div></div><div class="cards">';
+  var items=(s.items||[]).map(function(it,i){return {it:it,i:i};}).sort(function(a,b){return a.it.date<b.it.date?-1:a.it.date>b.it.date?1:toMin(a.it.time)-toMin(b.it.time);});
+  items.forEach(function(x){
+    var it=x.it, d=pd(it.date);
+    h+=lcard({l:it,top:sdate(it.date)+" "+d.getDate()+"."+(d.getMonth()<9?"0":"")+(d.getMonth()+1),t1:esc(it.time),tap:'data-a="editit" data-i="'+x.i+'"',
+      tags:'<span class="tag'+(it.kind==="exam"?" solid":" on")+'">'+KINDS[it.kind]+'</span>'});
+  });
+  h+=addCard("","","",'data-a="addit"',"Добавить экзамен, зачёт или консультацию","");
+  return h+'</div><button class="btn danger" data-a="delsess">Удалить сессию</button>';
+}
+
+// --- Общее ---
+// --- Экран «Карточки пар»: справочник с поиском, правкой и удалением ---
+var cq="";
+function usedCard(k0){
+  var today=key(new Date());
+  if(data.lessons.some(function(l){return cardKey(l)===k0;}))return true;
+  for(var d in data.changes||{})if(d>=today&&data.changes[d].some(function(c){return !c.cancel&&cardKey(c)===k0;}))return true;
+  return false;
+}
+function rCards(){
+  return '<button class="back" data-a="cardsback" style="align-self:flex-start"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>Общее</button>'
+    +'<h2>Карточки пар</h2>'
+    +'<input type="search" id="cq" placeholder="Поиск: предмет, преподаватель, аудитория" autocomplete="off" value="'+esc(cq)+'">'
+    +'<button class="btn primary" data-a="newcard">'+I_PLUS+'Добавить новую карточку</button>'
+    +'<div class="cards" id="clist"></div>';
+}
+function paintCards(){
+  var h="";
+  allCards().forEach(function(k){if(matches(k,cq))h+=cardHtml(k,'data-a="editcard" data-k="'+esc(cardKey(k))+'"',true);});
+  $("clist").innerHTML=h||'<div class="empty">Ничего не нашлось</div>';
+}
+document.addEventListener("input",function(e){if(e.target.id==="cq"){cq=e.target.value;paintCards();}});
+
+// Редактор карточки: предмет, преподаватель, тип и список аудиторий
+var ced=null;
+function cardEditor(k,isNew){
+  ced={k0:isNew?null:cardKey(k),s:k.s||"",tch:k.tch||"",r:splitR(k.r)};
+  paintEditor(isNew);
+  $("fsheet").hidden=false;
+}
+function paintEditor(isNew){
+  var used=!isNew&&usedCard(ced.k0);
+  var h='<div><h2 id="ftitle">'+(isNew?"Новая карточка":"Карточка пары")+'</h2><div class="muted small" style="margin-top:4px">'
+    +(isNew?"Потом её можно выбрать при замене или при добавлении пары":used?"Изменения применятся ко всем парам с этой карточкой":"Карточка пока нигде не стоит")+'</div></div>'
+    +'<label class="field"><span class="lbl">Предмет</span><input id="ce-s" type="text" list="dl-ces" autocomplete="off" value="'+esc(ced.s)+'"><datalist id="dl-ces">'+uniq(function(x){return x.s;}).map(function(o){return '<option value="'+esc(o)+'">';}).join("")+'</datalist></label>'
+    +'<label class="field"><span class="lbl">Преподаватель</span><input id="ce-tch" type="text" list="dl-cet" autocomplete="off" value="'+esc(ced.tch)+'"><datalist id="dl-cet">'+uniq(function(x){return x.tch;}).map(function(o){return '<option value="'+esc(o)+'">';}).join("")+'</datalist></label>'
+    +'<div class="field"><span class="lbl">Аудитории</span><div class="chips">'+ced.r.map(function(r,i){return '<span class="chip">'+esc(r)+'<button type="button" data-cr="'+i+'" aria-label="Убрать аудиторию '+esc(r)+'">'+I_X+'</button></span>';}).join("")
+    +'</div><div class="addrow"><input id="ce-r" type="text" list="dl-cer" placeholder="Например, 3-2" autocomplete="off"><datalist id="dl-cer">'+uniq(function(x){return x.r;}).map(function(o){return '<option value="'+esc(o)+'">';}).join("")+'</datalist><button type="button" class="btn ghost" id="ce-radd">Добавить</button></div></div>'
+    +'<div class="err" id="ferr" hidden></div><div class="actions">'+(!isNew&&!used?'<button class="btn danger" id="ce-del">Удалить</button>':'')+'<button class="btn ghost" id="fcancel">Отмена</button><button class="btn primary" id="ce-ok">Готово</button></div>';
+  $("fpanel").innerHTML=h; $("fpanel").dataset.isnew=isNew?"1":"";
+}
+function readEditor(){ced.s=$("ce-s").value.trim();ced.tch=$("ce-tch").value.trim();}
+function saveEditor(){
+  readEditor();
+  var err=!ced.s?"Укажите предмет":"";
+  var nk=cardKey(ced);
+  if(!err&&nk!==ced.k0&&allCards().some(function(k){return cardKey(k)===nk;}))err="Карточка с таким предметом и преподавателем уже есть";
+  if(err){$("ferr").hidden=false;$("ferr").textContent=err;return;}
+  var today=key(new Date());
+  data.cards=(data.cards||[]).filter(function(k){return cardKey(k)!==ced.k0;});
+  if(ced.k0){ // переименование доходит до всех пар с этой карточкой
+    // тип меняется у тех пар, где стоял прежний основной тип карточки
+    function upd(l){if(cardKey(l)===ced.k0){l.s=ced.s;l.tch=ced.tch;}}
+    data.lessons.forEach(upd);
+    for(var d in data.changes||{})if(d>=today)data.changes[d].forEach(function(c){if(!c.cancel)upd(c);});
+  }
+  data.cards.push({s:ced.s,tch:ced.tch,r:ced.r.slice()});
+  var isNew=!ced.k0; closeForm(); dirty(); toast(isNew?"Карточка добавлена":"Карточка обновлена");
+}
+$("fpanel").addEventListener("click",function(e){
+  if(!ced||!$("ce-ok"))return;
+  var isNew=$("fpanel").dataset.isnew==="1", r=e.target.closest("[data-cr]");
+  if(r){readEditor();ced.r.splice(+r.dataset.cr,1);paintEditor(isNew);return;}
+  if(e.target.closest("#ce-radd")){readEditor();var nv=$("ce-r").value.trim();splitR(nv).forEach(function(x){addU(ced.r,x);});paintEditor(isNew);$("ce-r").focus();return;}
+  if(e.target.closest("#ce-ok")){saveEditor();return;}
+  if(e.target.closest("#ce-del")){var k0=ced.k0;closeForm();data.cards=(data.cards||[]).filter(function(k){return cardKey(k)!==k0;});dirty();toast("Карточка удалена");return;}
+});
+$("fpanel").addEventListener("keydown",function(e){if(e.target.id==="ce-r"&&e.key==="Enter"){e.preventDefault();$("ce-radd").click();}});
+function newCard(){cardEditor({},true);}
+function editCard(k0){var c=null;allCards().forEach(function(k){if(cardKey(k)===k0)c=k;});if(c)cardEditor(c,false);}
+
+function rGen(){
+  var mon=mondayOf(new Date()), wt=weekType(mon), fri=addDays(mon,5);
+  var h='<button class="btn ghost tap-card" data-a="cards"><span><b>Карточки пар</b><span class="muted small">Изменить, удалить или добавить карточки</span></span><span class="chev">›</span></button>';
+  h+='<div class="card"><span class="lbl">Текущая неделя, '+mon.getDate()+'-'+fri.getDate()+' '+MONF[fri.getMonth()]+'</span>'
+    +'<div class="seg"><button data-a="wk" data-v="over" aria-pressed="'+(wt==="over")+'">Над чертой</button><button data-a="wk" data-v="under" aria-pressed="'+(wt==="under")+'">Под чертой</button></div>'
+    +'<span class="muted small">Дальше недели чередуются сами.</span></div>';
+  h+='<div class="card"><span class="lbl">Последний день занятий</span><input type="date" id="gend" value="'+esc(data.end)+'"><span class="muted small">После этой даты пары не показываются (замены и сессия показываются), и календарь в приложении дальше не листается.</span></div>';
+  h+='<div class="card"><span class="lbl">Звонки</span>';
+  data.bells.forEach(function(b,i){
+    var used=data.lessons.some(function(l){return l.p===i+1;});
+    h+='<div class="bell"><div class="bh"><b>'+(i+1)+' пара</b>'
+      +(i===data.bells.length-1&&!used&&data.bells.length>1?'<button class="x" data-a="delbell" aria-label="Убрать пару">'+I_X+'</button>':'')+'</div>'
+      +'<div class="brow"><span>с</span><input type="time" data-bell="'+i+'" data-e="0" value="'+padTime(b[0])+'"><span>по</span><input type="time" data-bell="'+i+'" data-e="1" value="'+padTime(b[1])+'"></div>';
+    if(b.length>2)h+='<div class="bsub"><span class="lbl">Пятиминутка</span><button class="x" data-a="delbrk" data-i="'+i+'" aria-label="Убрать пятиминутку">'+I_X+'</button></div>'
+      +'<div class="brow"><span>с</span><input type="time" data-bell="'+i+'" data-e="2" value="'+padTime(b[2])+'"><span>по</span><input type="time" data-bell="'+i+'" data-e="3" value="'+padTime(b[3])+'"></div>';
+    else h+='<button class="mini" data-a="addbrk" data-i="'+i+'">'+I_PLUS+'Пятиминутка</button>';
+    h+='</div>';
+  });
+  h+='<button class="btn ghost" data-a="addbell">Добавить пару</button><span class="muted small">Пятиминутка показывается в приложении ровно в указанное время. Без неё пара идёт без перерыва.</span></div>';
+  if(DEMO)h+='<div class="card"><span class="lbl">Демо</span><span class="small muted">Изменения хранятся только в этом браузере и видны в демо-расписании.</span><button class="btn danger" data-a="reset">Сбросить черновик</button></div>';
+  h+='<div class="card"><span class="lbl">Аккаунт</span><span class="small muted">Ключ GitHub хранится только на этом устройстве.</span><button class="btn danger" data-a="logout">Выйти</button></div>';
+  return h;
+}
+
+// ---------- Формы ----------
+var formSave=null, formDel=null;
+function F(k,label,type,val,opts){return {k:k,label:label,type:type,val:val,opts:opts};}
+function openForm(title,sub,fields,onSave,onDel){
+  var h='<div><h2 id="ftitle">'+esc(title)+'</h2>'+(sub?'<div class="muted small" style="margin-top:4px">'+esc(sub)+'</div>':'')+'</div>';
+  fields.forEach(function(f){
+    h+='<label class="field"><span class="lbl">'+f.label+'</span>';
+    if(f.type==="seg")h+='<div class="seg" data-f="'+f.k+'">'+Object.keys(f.opts).map(function(v){return '<button type="button" data-v="'+v+'" aria-pressed="'+(v===f.val)+'">'+f.opts[v]+'</button>';}).join("")+'</div>';
+    else if(f.type==="select")h+='<select data-f="'+f.k+'">'+f.opts.map(function(o){return '<option value="'+o[0]+'"'+(String(o[0])===String(f.val)?" selected":"")+'>'+esc(o[1])+'</option>';}).join("")+'</select>';
+    else h+='<input data-f="'+f.k+'" type="'+(f.type==="list"?"text":f.type)+'" value="'+esc(f.type==="time"?padTime(f.val):f.val)+'"'+(f.type==="list"?' list="dl-'+f.k+'" autocomplete="off"':'')+'>'
+      +(f.type==="list"?'<datalist id="dl-'+f.k+'">'+f.opts.map(function(o){return '<option value="'+esc(o)+'">';}).join("")+'</datalist>':'');
+    h+='</label>';
+  });
+  h+='<div class="err" id="ferr" hidden></div><div class="actions">'+(onDel?'<button class="btn danger" id="fdel">Удалить</button>':'')+'<button class="btn ghost" id="fcancel">Отмена</button><button class="btn primary" id="fok">Готово</button></div>';
+  var p=$("fpanel"); p.innerHTML=h; formSave=onSave; formDel=onDel;
+  $("fsheet").hidden=false;
+}
+function formVals(){
+  var v={};
+  Array.prototype.forEach.call($("fpanel").querySelectorAll("[data-f]"),function(el){
+    if(el.classList.contains("seg")){var bs=el.querySelectorAll('[aria-pressed="true"]');v[el.dataset.f]=Array.prototype.map.call(bs,function(b){return b.dataset.v;}).join(", ");}
+    else v[el.dataset.f]=el.value.trim();
+  });
+  return v;
+}
+function openLessonForm(i,l){
+  openForm(i>=0?"Изменить пару":"Новая пара",i>=0?"Карточка пары в постоянном расписании":"",[F("d","День","select",l.d,DSHORT.map(function(n,j){return [j,DFULL[(j+1)%7]];})),F("p","Пара","select",l.p,pairOpts()),F("w","Неделя","seg",l.w,WEEKS)].concat(lessonFields(l),[F("from","Начинается с (если не с начала семестра)","date",l.from||"")]),function(v){
+    if(!v.s)return "Укажите предмет";
+    var n={d:+v.d,p:+v.p,w:v.w||"all",s:v.s,t:v.t,tch:v.tch,r:v.r};
+    if(DATE_RE.test(v.from||""))n.from=v.from;
+    for(var j=0;j<data.lessons.length;j++){var o=data.lessons[j];if(j!==i&&o.d===n.d&&o.p===n.p&&(o.w===n.w||o.w==="all"||n.w==="all"))return "В это время уже стоит "+o.s+(o.w!=="all"?" ("+WEEKS[o.w].toLowerCase()+")":"");}
+    if(i>=0)data.lessons[i]=n; else data.lessons.push(n);
+    (data.cards||[]).forEach(function(k){if(cardKey(k)===cardKey(n)&&n.r){k.r=splitR(k.r);splitR(n.r).forEach(function(x){addU(k.r,x);});}});
+    setWdate(key(addDays(mondayOf(pd(wdate)),n.d)));
+  },i>=0?function(){data.lessons.splice(i,1);}:null);
+}
+
+// ---------- Карточки пар ----------
+// Карточка = предмет + преподаватель. Внутри все типы и аудитории, которые у неё бывают.
+// Собираются из справочника (data.cards) и из постоянного расписания, без повторов.
+function cardKey(l){return (l.s||"")+"|"+(l.tch||"");}
+function asArr(v){return Array.isArray(v)?v:(v?[v]:[]);}
+function addU(a,v){if(v&&a.indexOf(v)<0)a.push(v);}
+var TORDER=["lec","prac","mix"];
+function splitR(v){var out=[];asArr(v).forEach(function(x){String(x).split(/\s*,\s*/).forEach(function(y){y=y.trim();if(y)addU(out,y);});});return out;}
+var CHOICE=["lec","prac"]; // что выбирают при постановке пары
+function allCards(){
+  var by={},out=[];
+  function take(l,own){
+    var k=cardKey(l), c=by[k];
+    if(!c){c=by[k]={s:l.s,tch:l.tch||"",t:[],r:[],own:!!own};out.push(c);}
+    asArr(l.t).forEach(function(x){addU(c.t,x);});
+    if(own||!c.own)splitR(l.r).forEach(function(x){addU(c.r,x);}); // у сохранённой карточки аудитории берём только из неё самой
+  }
+  (data.cards||[]).forEach(function(k){take(k,true);}); data.lessons.forEach(function(l){take(l,false);});
+  var cnt={};
+  data.lessons.forEach(function(l){var k=cardKey(l);cnt[k]=cnt[k]||{};cnt[k][l.t]=(cnt[k][l.t]||0)+1;});
+  out.forEach(function(c){
+    if(!c.main){var m=cnt[cardKey(c)]||{},best=null;Object.keys(m).forEach(function(t){if(!best||m[t]>m[best])best=t;});c.main=best||c.t[0]||"mix";}c.t.sort(function(a,b){return TORDER.indexOf(a)-TORDER.indexOf(b);});c.r.sort(function(a,b){return a.localeCompare(b,"ru",{numeric:true});});});
+  return out.sort(function(a,b){return a.s.localeCompare(b.s,"ru")||a.tch.localeCompare(b.tch,"ru");});
+}
+function cardHay(k){return norm([k.s,k.tch,k.r.map(function(r){return "ауд "+r;}).join(" ")].join(" "));}
+function cardHtml(k,attrs,pen){
+  return '<'+(pen?'article role="button" tabindex="0"':'button')+' class="lc pc" '+attrs+'><div class="lb"><p class="ls">'+esc(k.s)+'</p>'
+    +(k.tch?'<div class="lm">'+esc(k.tch)+'</div>':'')+(k.r.length?'<div class="lr"><small>ауд. </small>'+k.r.map(esc).join('<small> · </small>')+'</div>':'')+'</div>'
+    +(pen?'<span class="pen" aria-hidden="true">'+I_PEN+'</span></article>':'</button>');
+}
+function norm(x){return String(x||"").toLowerCase().replace(/ё/g,"е");}
+function matches(k,q){var w=norm(q).split(/\s+/).filter(Boolean),hay=cardHay(k);return w.every(function(x){return hay.indexOf(x)>=0;});}
+
+// ---------- Выбор карточки при замене и добавлении пары ----------
+var pickList=[], pickFn=null, pickHint=null, pickQ="", pickHead="";
+function pickCard(title,sub,hint,onPick){
+  pickList=allCards(); pickFn=onPick; pickHint=hint||null; pickQ="";
+  pickHead='<div><h2 id="ftitle">'+esc(title)+'</h2><div class="muted small" style="margin-top:4px">'+esc(sub)+'</div></div>';
+  showPickList();
+  $("fsheet").hidden=false;
+}
+function showPickList(){
+  $("fpanel").innerHTML=pickHead
+    +'<div class="psearch"><input type="search" id="pq" placeholder="Поиск: предмет, преподаватель, аудитория" autocomplete="off" enterkeyhint="search" value="'+esc(pickQ)+'"></div>'
+    +'<div class="cards" id="plist"></div>'
+    +'<div class="actions"><button class="btn ghost" id="fcancel">Отмена</button></div>';
+  paintPick();
+  $("pq").addEventListener("input",function(){pickQ=this.value;paintPick();});
+}
+function paintPick(){
+  var h="";
+  pickList.forEach(function(k,i){if(matches(k,pickQ))h+=cardHtml(k,'data-pick="'+i+'"');});
+  $("plist").innerHTML=h||'<div class="empty">Ничего не нашлось. Новую карточку можно добавить в «Общее → Карточки пар».</div>';
+}
+// Если у карточки несколько типов или аудиторий, сначала спрашиваем, какие поставить
+var pickCur=null;
+function choosePick(k){
+  pickCur=k;
+  var ht=pickHint&&cardKey(pickHint)===cardKey(k)?pickHint:null;
+  var t0=ht&&CHOICE.indexOf(ht.t)>=0?ht.t:CHOICE.indexOf(k.main)>=0?k.main:"lec", rs=ht?splitR(ht.r).filter(function(x){return k.r.indexOf(x)>=0;}):[];
+  if(!rs.length&&k.r.length)rs=[k.r[0]];
+  var h=pickHead+'<div class="lc pc"><div class="lb"><p class="ls">'+esc(k.s)+'</p>'+(k.tch?'<div class="lm">'+esc(k.tch)+'</div>':'')+'</div></div>';
+  h+='<div class="field"><span class="lbl">Лекция или практика</span><div class="seg" data-f="t">'+CHOICE.map(function(t){return '<button type="button" data-v="'+t+'" aria-pressed="'+(t===t0)+'">'+TYPES[t]+'</button>';}).join("")+'</div></div>';
+  if(k.r.length>1)h+='<div class="field"><span class="lbl">Аудитория</span><div class="seg wrap multi" data-f="r">'+k.r.map(function(r){return '<button type="button" data-v="'+esc(r)+'" aria-pressed="'+(rs.indexOf(r)>=0)+'">'+esc(r)+'</button>';}).join("")+'</div><span class="muted small">Можно отметить несколько, например для подгрупп</span></div>';
+  h+='<div class="actions"><button class="btn ghost" id="pback">Назад</button><button class="btn primary" id="pok">Поставить</button></div>';
+  $("fpanel").innerHTML=h;
+}
+function finishPick(){
+  var v=formVals(), k=pickCur, fn=pickFn;
+  if(k.r.length>1&&!v.r){toast("Выберите аудиторию");return;}
+  closeForm();
+  fn({s:k.s,tch:k.tch,t:v.t||k.main,r:v.r!==undefined?v.r:(k.r[0]||"")});
+}
+function closeForm(){$("fsheet").hidden=true;formSave=formDel=null;ced=null;pickCur=null;}
+$("fsheet").addEventListener("click",function(e){
+  if(e.target.id==="fsheet"||e.target.id==="fcancel"){closeForm();return;}
+  var sb=e.target.closest(".seg button");
+  if(sb&&sb.parentNode.classList.contains("multi")){sb.setAttribute("aria-pressed",sb.getAttribute("aria-pressed")==="true"?"false":"true");return;}
+  if(sb){Array.prototype.forEach.call(sb.parentNode.children,function(b){b.setAttribute("aria-pressed",b===sb?"true":"false");});return;}
+  var pk=e.target.closest("[data-pick]");
+  if(pk){choosePick(pickList[+pk.dataset.pick]);return;}
+  if(e.target.id==="pback"){pickCur=null;showPickList();return;}
+  if(e.target.id==="pok"){finishPick();return;}
+  if(e.target.id==="fok"){var err=formSave(formVals());if(err){$("ferr").hidden=false;$("ferr").textContent=err;return;}closeForm();dirty();}
+  if(e.target.id==="fdel"){var del=formDel;closeForm();del();dirty();}
+});
+function firstFree(){for(var p=1;p<=data.bells.length;p++)if(!data.lessons.some(function(l){return l.d===wday&&l.p===p;}))return p;return 1;}
+function pairOpts(){return data.bells.map(function(b,i){return [i+1,(i+1)+" пара, "+b[0]+"-"+b[1]];});}
+function lessonFields(l){
+  return [F("s","Предмет","list",l.s||"",uniq(function(x){return x.s;})),
+    F("t","Тип","seg",l.t==="prac"?"prac":"lec",{lec:TYPES.lec,prac:TYPES.prac}),
+    F("tch","Преподаватель","list",l.tch||"",uniq(function(x){return x.tch;})),
+    F("r","Аудитория","list",l.r||"",uniq(function(x){return x.r;}))];
+}
+
+// ---------- Действия ----------
+function ask(title,text,yes,yesText){
+  $("ctl").textContent=title;$("ctx").textContent=text;$("cyes").textContent=yesText||"Да";
+  $("cdlg").hidden=false;
+  $("cyes").onclick=function(){$("cdlg").hidden=true;yes();};
+}
+$("cno").onclick=function(){$("cdlg").hidden=true;};
+$("cdlg").addEventListener("click",function(e){if(e.target.id==="cdlg")$("cdlg").hidden=true;});
+var tt=null;
+function toast(t){var el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(function(){el.hidden=true;},3500);}
+
+document.addEventListener("change",function(e){
+  var el=e.target;
+  if(el.id==="dday"&&DATE_RE.test(el.value)){dsel=el.value;render();}
+  else if(el.id==="wday"&&DATE_RE.test(el.value)){setWdate(el.value);render();}
+  else if(el.id==="gend"&&DATE_RE.test(el.value)){data.end=el.value;dirty();}
+  else if(el.dataset.bell!==undefined&&el.value){data.bells[+el.dataset.bell][+el.dataset.e]=normTime(el.value);dirty();}
+});
+// Карточки открываются и с клавиатуры
+$("main").addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.getAttribute("role")==="button"){e.preventDefault();e.target.click();}});
+$("main").addEventListener("click",function(e){
+  var b=e.target.closest("[data-a]"); if(!b)return;
+  var a=b.dataset.a, p=+b.dataset.p;
+  if(a==="dprev"||a==="dnext"){var d=addDays(pd(dsel),a==="dprev"?-1:1);if(d.getDay()===0)d=addDays(d,a==="dprev"?-1:1);dsel=key(d);render();}
+  else if(a==="cancel"){var bl=baseFor(pd(dsel))[p];setChange(dsel,p,{p:p,cancel:true,was:short(bl)});toast("Пара отменена");}
+  else if(a==="restore"){setChange(dsel,p,null);}
+  else if(a==="sub"){
+    var bs=baseFor(pd(dsel))[p];
+    pickCard(bs?"Замена":"Дополнительная пара",dlabel(dsel)+", "+p+" пара"+(bs?". По расписанию: "+short(bs):""),bs,function(k){
+      setChange(dsel,p,{p:p,s:k.s,t:k.t,tch:k.tch,r:k.r,was:bs?short(bs):""});
+      toast(bs?"Замена поставлена":"Пара добавлена");
+    });
+  }
+  else if(a==="goto"){dsel=b.dataset.k;render();window.scrollTo(0,0);}
+  else if(a==="delch"){setChange(b.dataset.k,p,null);}
+  else if(a==="clrpast"){var today=key(new Date());ask("Убрать прошедшие изменения?","Замены и отмены за прошедшие дни удалятся из списка.",function(){Object.keys(data.changes).forEach(function(k){if(k<today)delete data.changes[k];});dirty();},"Убрать");}
+  else if(a==="wday"){setWdate(b.dataset.k);render();}
+  else if(a==="wprev"||a==="wnext"){setWdate(key(addDays(pd(wdate),a==="wprev"?-7:7)));render();}
+  else if(a==="addl"&&b.dataset.p){
+    var sp=+b.dataset.p, sw=b.dataset.w||"all";
+    pickCard("Новая пара",DFULL[(wday+1)%7]+", "+sp+" пара"+(sw!=="all"?", "+WEEKS[sw].toLowerCase():""),null,function(k){
+      data.lessons.push({d:wday,p:sp,w:sw,s:k.s,t:k.t,tch:k.tch,r:k.r});dirty();toast("Пара добавлена");
+    });
+  }
+  else if(a==="addl"||a==="editl"){
+    var i=a==="editl"?+b.dataset.i:-1;
+    openLessonForm(i,i>=0?data.lessons[i]:{d:wday,p:firstFree(),w:"all",t:"mix"});
+  }
+  else if(a==="addsess"||a==="editsess"){
+    var s=data.session||{from:"",to:"",items:[]};
+    openForm("Период сессии","",[F("from","Начало","date",s.from),F("to","Конец","date",s.to)],function(v){
+      if(!DATE_RE.test(v.from)||!DATE_RE.test(v.to))return "Укажите обе даты";
+      if(v.from>v.to)return "Конец раньше начала";
+      s.from=v.from;s.to=v.to;data.session=s;
+    });
+  }
+  else if(a==="delsess"){ask("Удалить сессию?","Удалятся период и все экзамены, зачёты и консультации.",function(){data.session=null;dirty();},"Удалить");}
+  else if(a==="addit"||a==="editit"){
+    var k=a==="editit"?+b.dataset.i:-1, items=data.session.items=data.session.items||[];
+    var it=k>=0?items[k]:{date:data.session.from,time:"9:00",kind:"exam"};
+    openForm(k>=0?"Изменить":"Добавить","",[F("date","Дата","date",it.date),F("time","Начало","time",it.time),F("kind","Что","seg",it.kind,KINDS)]
+      .concat(lessonFields(it).filter(function(f){return f.k!=="t";})),function(v){
+      if(!DATE_RE.test(v.date))return "Укажите дату";
+      if(!v.time)return "Укажите время";
+      if(!v.s)return "Укажите предмет";
+      var n={date:v.date,time:normTime(v.time),kind:v.kind||"exam",s:v.s,tch:v.tch,r:v.r};
+      if(k>=0)items[k]=n; else items.push(n);
+    },k>=0?function(){items.splice(k,1);}:null);
+  }
+  else if(a==="newcard")newCard();
+  else if(a==="cards"){tab="cards";cq="";paintTabs();render();window.scrollTo(0,0);}
+  else if(a==="cardsback"){tab="gen";paintTabs();render();window.scrollTo(0,0);}
+  else if(a==="editcard")editCard(b.dataset.k);
+  else if(a==="wk"){data.anchor=key(mondayOf(new Date()));data.anchorType=b.dataset.v;dirty();}
+  else if(a==="addbell"){var lb=data.bells[data.bells.length-1], st=toMin(lb[1])+10, ln=toMin(lb[1])-toMin(lb[0]);data.bells.push([fmtMin(st),fmtMin(st+ln)]);dirty();}
+  else if(a==="delbell"){data.bells.pop();dirty();}
+  else if(a==="addbrk"){var bb=data.bells[+b.dataset.i], s0=toMin(bb[0]), m0=s0+Math.floor((toMin(bb[1])-s0-5)/2);bb[2]=fmtMin(m0);bb[3]=fmtMin(m0+5);dirty();}
+  else if(a==="delbrk"){data.bells[+b.dataset.i].length=2;dirty();}
+  else if(a==="reset"){ask("Сбросить черновик?","Демо вернётся к расписанию из файла.",function(){lsSet(DRAFT_KEY,null);location.reload();},"Сбросить");}
+  else if(a==="logout"){ask("Выйти из редактора?","Ключ удалится с этого устройства.",function(){lsSet(TOKEN_KEY,null);location.reload();},"Выйти");}
+});
+
+start();
+})();
+</script>
+</body>
+</html>
