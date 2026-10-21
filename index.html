@@ -290,7 +290,7 @@ a.btn[aria-busy="true"]{opacity:.6;pointer-events:none}
     <nav class="days" id="days"></nav>
     <section class="list" id="list"></section>
   </section>
-  <footer class="ver">v 37</footer>
+  <footer class="ver">v 38</footer>
 </div>
 
 <div class="sheet" id="wsheet" hidden>
@@ -437,6 +437,7 @@ function buildDay(d,k){
   ch.forEach(function(c){
     var base=by[c.p];
     if(c.cancel){if(base)by[c.p]=ext(base,{cancel:true});return;}
+    if(c.ed&&base){by[c.p]=ext(base,{s:c.s,t:c.t,tch:c.tch,r:c.r,ed:true});return;} // разовая правка карточки
     by[c.p]=ext(c,{sub:base?"rep":"add",was:c.was||(base?base.s+(base.tch?", "+base.tch:""):"")});
   });
   return Object.keys(by).map(function(p){return by[p];}).sort(byP);
@@ -474,7 +475,7 @@ function dayHasNote(d){return !!noteDays[key(d)];}
 var TAGS={lec:'<span class="tag t-lec">Лекция</span>',prac:'<span class="tag t-prac">Практика</span>',mix:'<span class="tag t-mix">Лекция/Практика</span>'};
 function tagHtml(l){
   if(l.kind)return '<span class="tag t-k-'+l.kind+'">'+KINDS[l.kind]+'</span>';
-  return (TAGS[l.t]||"")+(l.cancel?'<span class="tag t-cancel">Отменена</span>':l.sub==="rep"?'<span class="tag t-sub">Замена</span>':l.sub==="add"?'<span class="tag t-sub">Доп. пара</span>':"");
+  return (TAGS[l.t]||"")+(l.cancel?'<span class="tag t-cancel">Отменена</span>':l.ed?'<span class="tag t-sub">Изменено</span>':l.sub==="rep"?'<span class="tag t-sub">Замена</span>':l.sub==="add"?'<span class="tag t-sub">Доп. пара</span>':"");
 }
 // Шкала пары: если в звонках есть пятиминутка, она показывается ровно в своё время, иначе пара идёт без перерыва
 function pairBar(s,e,m,h1,h2){

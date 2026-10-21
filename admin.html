@@ -202,7 +202,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 37</footer>
+  <footer class="ver">v 38</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -277,6 +277,8 @@ function setChange(k,p,obj){
   if(a.length)data.changes[k]=a; else delete data.changes[k];
   dirty();
 }
+// Чем разовая правка отличается от обычной пары
+function edDiff(b,c){var o=[];if(b.s!==c.s)o.push(b.s);if(b.t!==c.t)o.push(b.t==="lec"?"лекция":b.t==="prac"?"практика":"лекция/практика");if((b.tch||"")!==(c.tch||""))o.push(b.tch||"без преподавателя");if((b.r||"")!==(c.r||""))o.push(b.r?"ауд. "+b.r:"без аудитории");return o.join(", ");}
 function short(l){return l?(l.s+(l.tch?", "+l.tch:"")):"";}
 function uniq(f){
   var set={},out=[];
@@ -296,7 +298,7 @@ function clean(x){
     .sort(function(a,b){return a.d-b.d||a.p-b.p||(a.w>b.w?1:a.w<b.w?-1:0);});
   out.changes={};
   Object.keys(x.changes||{}).sort().forEach(function(k){
-    var a=x.changes[k].map(function(c){return c.cancel?pick(c,["p","cancel","was"]):pick(c,["p","s","t","tch","r","was"]);});
+    var a=x.changes[k].map(function(c){return c.cancel?pick(c,["p","cancel","was"]):pick(c,["p","s","t","tch","r","was","ed"]);});
     if(a.length)out.changes[k]=a;
   });
   // Справочник карточек пар: то, что админ создал сам (карточки из расписания добавляются автоматически)
@@ -495,23 +497,26 @@ function rDays(){
     var p=i+1, b=by[p], c=changeOf(dsel,p), P=' data-p="'+p+'"', top=p+" пара";
     if(c&&c.cancel&&b)h+=lcard({l:b,top:top,t1:bl[0],t2:bl[1],cls:" cancel",tags:tagT(b.t)+'<span class="tag">Отменена</span>',
       acts:'<button class="btn ghost sm" data-a="restore"'+P+'>Вернуть пару</button>'});
+    else if(c&&c.ed&&b)h+=lcard({l:c,top:top,t1:bl[0],t2:bl[1],cls:" subst",tags:tagT(c.t)+'<span class="tag on">Изменено</span>',
+      extra:'<div class="was">Только в этот день'+(edDiff(b,c)?'. Обычно: '+esc(edDiff(b,c)):'')+'</div>',
+      acts:'<button class="btn ghost sm" data-a="once"'+P+'>Изменить</button><button class="btn ghost sm" data-a="restore"'+P+'>Вернуть как было</button>'});
     else if(c&&!c.cancel)h+=lcard({l:c,top:top,t1:bl[0],t2:bl[1],cls:" subst",tags:tagT(c.t)+'<span class="tag on">'+(b?"Замена":"Доп. пара")+'</span>',
       extra:(b||c.was?'<div class="was">Вместо: '+esc(c.was||short(b))+'</div>':''),
-      acts:'<button class="btn ghost sm" data-a="sub"'+P+'>Другая пара</button><button class="btn ghost sm" data-a="restore"'+P+'>'+(b?"Вернуть как было":"Убрать")+'</button>'});
+      acts:'<button class="btn ghost sm" data-a="once"'+P+'>Изменить</button><button class="btn ghost sm" data-a="sub"'+P+'>Другая пара</button><button class="btn ghost sm" data-a="restore"'+P+'>'+(b?"Вернуть как было":"Убрать")+'</button>'});
     else if(b)h+=lcard({l:b,top:top,t1:bl[0],t2:bl[1],tags:tagT(b.t),
-      acts:'<button class="btn ghost sm" data-a="sub"'+P+'>Заменить</button><button class="btn ghost sm" data-a="cancel"'+P+'>Отменить</button>'});
+      acts:'<button class="btn ghost sm" data-a="once"'+P+'>Изменить</button><button class="btn ghost sm" data-a="sub"'+P+'>Заменить</button><button class="btn ghost sm" data-a="cancel"'+P+'>Отменить</button>'});
     else h+=addCard(top,bl[0],bl[1],'data-a="sub"'+P,"Добавить пару","Свободно");
   });
   h+='</div>';
   // Все замены и отмены
   var ks=Object.keys(data.changes||{}).sort(), today=key(new Date()), past=ks.filter(function(k){return k<today;}).length;
   h+='<div class="card"><div class="list-h"><h2>Все изменения</h2>'+(past?'<button class="btn ghost sm" data-a="clrpast">Убрать прошедшие</button>':'')+'</div>';
-  if(!ks.length)h+='<div class="empty">Замен и отмен нет</div>';
+  if(!ks.length)h+='<div class="empty">Изменений нет</div>';
   ks.forEach(function(k){
     data.changes[k].forEach(function(c){
       var b=baseFor(pd(k))[c.p];
       h+='<div class="ch'+(k<today?" muted":"")+'"><div class="b"><button class="tap" data-a="goto" data-k="'+k+'"><div class="d">'+sdate(k)+', '+pd(k).getDate()+' '+MONF[pd(k).getMonth()]+' · '+c.p+' пара</div>'
-        +'<div class="small muted">'+(c.cancel?"Отмена: "+esc(short(b)||c.was||""):(b?"Замена: ":"Доп. пара: ")+esc(c.s)+(c.tch?", "+esc(c.tch):""))+'</div></button></div>'
+        +'<div class="small muted">'+(c.cancel?"Отмена: "+esc(short(b)||c.was||""):(c.ed&&b?"Изменено: ":b?"Замена: ":"Доп. пара: ")+esc(c.s)+(c.tch?", "+esc(c.tch):""))+'</div></button></div>'
         +'<button class="x" data-a="delch" data-k="'+k+'" data-p="'+c.p+'" aria-label="Удалить">'+I_X+'</button></div>';
     });
   });
@@ -849,6 +854,18 @@ $("main").addEventListener("click",function(e){
   if(a==="dprev"||a==="dnext"){var d=addDays(pd(dsel),a==="dprev"?-1:1);if(d.getDay()===0)d=addDays(d,a==="dprev"?-1:1);dsel=key(d);render();}
   else if(a==="cancel"){var bl=baseFor(pd(dsel))[p];setChange(dsel,p,{p:p,cancel:true,was:short(bl)});toast("Пара отменена");}
   else if(a==="restore"){setChange(dsel,p,null);}
+  else if(a==="once"){
+    // Разовая правка карточки: меняется только эта дата, постоянное расписание не трогается
+    var bo=baseFor(pd(dsel))[p], co=changeOf(dsel,p), src=co&&!co.cancel?co:bo, isSub=co&&!co.cancel&&!co.ed;
+    openForm("Изменить на этот день",dlabel(dsel)+", "+p+" пара. Остальные недели не меняются",lessonFields(src),function(v){
+      if(!v.s)return "Укажите предмет";
+      var n={p:p,s:v.s,t:v.t,tch:v.tch,r:v.r};
+      if(isSub){n.was=co.was||"";setChange(dsel,p,n);toast("Замена изменена");return;}
+      if(!bo)return;
+      if(!edDiff(bo,n)){setChange(dsel,p,null);toast("Как по расписанию");return;}
+      n.ed=1;setChange(dsel,p,n);toast("Изменено только на этот день");
+    });
+  }
   else if(a==="sub"){
     var bs=baseFor(pd(dsel))[p];
     pickCard(bs?"Замена":"Дополнительная пара",dlabel(dsel)+", "+p+" пара"+(bs?". По расписанию: "+short(bs):""),bs,function(k){
