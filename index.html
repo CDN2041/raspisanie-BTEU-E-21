@@ -290,7 +290,7 @@ a.btn[aria-busy="true"]{opacity:.6;pointer-events:none}
     <nav class="days" id="days"></nav>
     <section class="list" id="list"></section>
   </section>
-  <footer class="ver">v 36</footer>
+  <footer class="ver">v 37</footer>
 </div>
 
 <div class="sheet" id="wsheet" hidden>
@@ -706,13 +706,13 @@ Array.prototype.forEach.call(document.querySelectorAll(".sheet"),function(sh){
   panel.addEventListener("touchmove",function(e){
     if(y0===null)return;
     var d=e.touches[0].clientY-y0;
-    dy=d>0?d:d/4; // вверх тянется туго, как в iOS
-    panel.style.transform="translateY("+dy+"px)";
+    dy=d>0?d:0; // вверх окно не двигается
+    panel.style.transform=dy?"translateY("+dy+"px)":"";
   },{passive:true});
   function end(){
     if(y0===null)return;
     var v=dy/Math.max(1,Date.now()-t0); y0=null;
-    if(dy>110||(v>.5&&dy>30))closeSheet(sh.id);
+    if(dy>80||(v>.5&&dy>30))closeSheet(sh.id);
     else{panel.style.transition="transform .4s var(--ios)";panel.style.transform="";}
   }
   panel.addEventListener("touchend",end); panel.addEventListener("touchcancel",end);
