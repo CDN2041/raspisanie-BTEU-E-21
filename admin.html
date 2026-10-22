@@ -202,7 +202,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 40</footer>
+  <footer class="ver">v 41</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -894,7 +894,7 @@ $("main").addEventListener("click",function(e){
   else if(a==="delch"){setChange(b.dataset.k,p,null);}
   else if(a==="clrpast"){var today=key(new Date());ask("Убрать прошедшие изменения?","Замены и отмены за прошедшие дни удалятся из списка.",function(){Object.keys(data.changes).forEach(function(k){if(k<today)delete data.changes[k];});dirty();},"Убрать");}
   else if(a==="wday"){setWdate(b.dataset.k);render();}
-  else if(a==="wprev"||a==="wnext"){setWdate(key(addDays(pd(wdate),a==="wprev"?-7:7)));render();}
+  else if(a==="wprev"||a==="wnext"){var nm=addDays(mondayOf(pd(wdate)),a==="wprev"?-7:7);if(data.start&&nm<pd(data.start))nm=pd(data.start);setWdate(key(nm));render();} // листаем на первый день недели
   else if(a==="addl"&&b.dataset.p){
     var sp=+b.dataset.p, sw=b.dataset.w||"all";
     pickCard("Новая пара",DFULL[(wday+1)%7]+", "+sp+" пара"+(sw!=="all"?", "+WEEKS[sw].toLowerCase():""),null,function(k){
