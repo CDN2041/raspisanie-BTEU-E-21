@@ -6,7 +6,7 @@ android {
     applicationId "by.cdn2041.pary"
     minSdk 24
     targetSdk 34
-    versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
+    versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
     versionName "1." + (System.getenv("VERSION_CODE") ?: "1")
   }
   signingConfigs {
