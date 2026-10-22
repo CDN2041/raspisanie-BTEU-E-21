@@ -202,7 +202,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 39</footer>
+  <footer class="ver">v 40</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -743,25 +743,26 @@ function allCards(){
   return out.sort(function(a,b){return a.s.localeCompare(b.s,"ru")||a.tch.localeCompare(b.tch,"ru");});
 }
 function cardHay(k){return norm([k.s,k.tch,k.r.map(function(r){return "ауд "+r;}).join(" ")].join(" "));}
-function cardHtml(k,attrs,pen){
+function cardHtml(k,attrs,pen,noRoom){
   return '<'+(pen?'article role="button" tabindex="0"':'button')+' class="lc pc" '+attrs+'><div class="lb"><p class="ls">'+esc(k.s)+'</p>'
-    +(k.tch?'<div class="lm">'+esc(k.tch)+'</div>':'')+(k.r.length?'<div class="lr"><small>ауд. </small>'+k.r.map(esc).join('<small> · </small>')+'</div>':'')+'</div>'
+    +(k.tch?'<div class="lm">'+esc(k.tch)+'</div>':'')+(k.r.length&&!noRoom?'<div class="lr"><small>ауд. </small>'+k.r.map(esc).join('<small> · </small>')+'</div>':'')+'</div>'
     +(pen?'<span class="pen" aria-hidden="true">'+I_PEN+'</span></article>':'</button>');
 }
 function norm(x){return String(x||"").toLowerCase().replace(/ё/g,"е");}
 function matches(k,q){var w=norm(q).split(/\s+/).filter(Boolean),hay=cardHay(k);return w.every(function(x){return hay.indexOf(x)>=0;});}
 
 // ---------- Выбор карточки при замене и добавлении пары ----------
-var pickList=[], pickFn=null, pickHint=null, pickQ="", pickHead="";
-function pickCard(title,sub,hint,onPick){
-  pickList=allCards(); pickFn=onPick; pickHint=hint||null; pickQ="";
+var pickList=[], pickFn=null, pickHint=null, pickQ="", pickHead="", pickFree=false;
+// free: аудитория вписывается вручную и в списке карточек не показывается
+function pickCard(title,sub,hint,onPick,free){
+  pickList=allCards(); pickFn=onPick; pickHint=hint||null; pickQ=""; pickFree=!!free;
   pickHead='<div><h2 id="ftitle">'+esc(title)+'</h2><div class="muted small" style="margin-top:4px">'+esc(sub)+'</div></div>';
   showPickList();
   showLayer($("fsheet"));
 }
 function showPickList(){
   $("fpanel").innerHTML=pickHead
-    +'<div class="psearch"><input type="search" id="pq" placeholder="Поиск: предмет, преподаватель, аудитория" autocomplete="off" enterkeyhint="search" value="'+esc(pickQ)+'"></div>'
+    +'<div class="psearch"><input type="search" id="pq" placeholder="Поиск: предмет, преподаватель'+(pickFree?'':', аудитория')+'" autocomplete="off" enterkeyhint="search" value="'+esc(pickQ)+'"></div>'
     +'<div class="cards" id="plist"></div>'
     +'<div class="actions"><button class="btn ghost" id="fcancel">Отмена</button></div>';
   paintPick();
@@ -769,7 +770,7 @@ function showPickList(){
 }
 function paintPick(){
   var h="";
-  pickList.forEach(function(k,i){if(matches(k,pickQ))h+=cardHtml(k,'data-pick="'+i+'"');});
+  pickList.forEach(function(k,i){if(matches(k,pickQ))h+=cardHtml(k,'data-pick="'+i+'"',false,pickFree);});
   $("plist").innerHTML=h||'<div class="empty">Ничего не нашлось. Новую карточку можно добавить в «Общее → Карточки пар».</div>';
 }
 // Если у карточки несколько типов или аудиторий, сначала спрашиваем, какие поставить
@@ -781,13 +782,14 @@ function choosePick(k){
   if(!rs.length&&k.r.length)rs=[k.r[0]];
   var h=pickHead+'<div class="lc pc"><div class="lb"><p class="ls">'+esc(k.s)+'</p>'+(k.tch?'<div class="lm">'+esc(k.tch)+'</div>':'')+'</div></div>';
   h+='<div class="field"><span class="lbl">Лекция или практика</span><div class="seg" data-f="t">'+CHOICE.map(function(t){return '<button type="button" data-v="'+t+'" aria-pressed="'+(t===t0)+'">'+TYPES[t]+'</button>';}).join("")+'</div></div>';
-  if(k.r.length>1)h+='<div class="field"><span class="lbl">Аудитория</span><div class="seg wrap multi" data-f="r">'+k.r.map(function(r){return '<button type="button" data-v="'+esc(r)+'" aria-pressed="'+(rs.indexOf(r)>=0)+'">'+esc(r)+'</button>';}).join("")+'</div><span class="muted small">Можно отметить несколько, например для подгрупп</span></div>';
+  if(pickFree){var rv=ht?ht.r||"":pickHint?pickHint.r||"":"";h+='<label class="field"><span class="lbl">Аудитория</span><input data-f="r" type="text" id="pr" value="'+esc(rv)+'" placeholder="Например, 3-2" autocomplete="off"></label>';}
+  else if(k.r.length>1)h+='<div class="field"><span class="lbl">Аудитория</span><div class="seg wrap multi" data-f="r">'+k.r.map(function(r){return '<button type="button" data-v="'+esc(r)+'" aria-pressed="'+(rs.indexOf(r)>=0)+'">'+esc(r)+'</button>';}).join("")+'</div><span class="muted small">Можно отметить несколько, например для подгрупп</span></div>';
   h+='<div class="actions"><button class="btn ghost" id="pback">Назад</button><button class="btn primary" id="pok">Поставить</button></div>';
   $("fpanel").innerHTML=h;
 }
 function finishPick(){
   var v=formVals(), k=pickCur, fn=pickFn;
-  if(k.r.length>1&&!v.r){toast("Выберите аудиторию");return;}
+  if(!pickFree&&k.r.length>1&&!v.r){toast("Выберите аудиторию");return;}
   closeForm();
   fn({s:k.s,tch:k.tch,t:v.t||k.main,r:v.r!==undefined?v.r:(k.r[0]||"")});
 }
@@ -873,14 +875,13 @@ $("main").addEventListener("click",function(e){
   else if(a==="once"){
     // Разовая правка карточки: меняется только эта дата, постоянное расписание не трогается
     var bo=baseFor(pd(dsel))[p], co=changeOf(dsel,p), src=co&&!co.cancel?co:bo, isSub=co&&!co.cancel&&!co.ed;
-    openForm("Изменить на этот день",dlabel(dsel)+", "+p+" пара. Остальные недели не меняются",lessonFields(src),function(v){
-      if(!v.s)return "Укажите предмет";
+    pickCard("Изменить на этот день",dlabel(dsel)+", "+p+" пара. Остальные недели не меняются",src,function(v){
       var n={p:p,s:v.s,t:v.t,tch:v.tch,r:v.r};
       if(isSub){n.was=co.was||"";setChange(dsel,p,n);toast("Замена изменена");return;}
       if(!bo)return;
       if(!edDiff(bo,n)){setChange(dsel,p,null);toast("Как по расписанию");return;}
       n.ed=1;setChange(dsel,p,n);toast("Изменено только на этот день");
-    });
+    },true);
   }
   else if(a==="sub"){
     var bs=baseFor(pd(dsel))[p];
