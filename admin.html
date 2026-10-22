@@ -198,11 +198,11 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
 
   <section id="work" hidden>
     <div class="seg tabs" id="tabs">
-      <button data-v="days">Дни</button><button data-v="week">Неделя</button><button data-v="sess">Сессия</button><button data-v="gen">Общее</button>
+      <button data-v="week">Неделя</button><button data-v="sess">Сессия</button><button data-v="gen">Общее</button>
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 38</footer>
+  <footer class="ver">v 39</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -256,7 +256,7 @@ var DATE_RE=/^\d{4}-\d\d-\d\d$/;
 (function(){var s=null;try{s=JSON.parse(lsGet(SKEY));}catch(e){}if(s&&(s.theme==="dark"||s.theme==="light"))document.documentElement.setAttribute("data-theme",s.theme);})();
 
 // ---------- Данные ----------
-var data=null, base="", sha=null, token=null, tab="days";
+var data=null, base="", sha=null, token=null, tab="week";
 function weekType(d){
   var w=Math.round((mondayOf(d)-mondayOf(pd(data.anchor)))/864e5/7), even=((w%2)+2)%2===0, a=data.anchorType==="over"?"over":"under";
   return even?a:(a==="under"?"over":"under");
@@ -508,6 +508,13 @@ function rDays(){
     else h+=addCard(top,bl[0],bl[1],'data-a="sub"'+P,"Добавить пару","Свободно");
   });
   h+='</div>';
+  return h+rChanges();
+}
+
+// --- Постоянное расписание: карточка на каждую пару, пустые места можно заполнить ---
+// Дата выбирается по календарю, неделя (над или под чертой) определяется по ней сама
+function rChanges(){
+  var h='';
   // Все замены и отмены
   var ks=Object.keys(data.changes||{}).sort(), today=key(new Date()), past=ks.filter(function(k){return k<today;}).length;
   h+='<div class="card"><div class="list-h"><h2>Все изменения</h2>'+(past?'<button class="btn ghost sm" data-a="clrpast">Убрать прошедшие</button>':'')+'</div>';
@@ -522,35 +529,44 @@ function rDays(){
   });
   return h+'</div>';
 }
-
-// --- Постоянное расписание: карточка на каждую пару, пустые места можно заполнить ---
-// Дата выбирается по календарю, неделя (над или под чертой) определяется по ней сама
 var wdate=dsel, wday=(pd(wdate).getDay()+6)%7;
-function setWdate(k){var d=pd(k);if(d.getDay()===0)d=addDays(d,1);wdate=key(d);wday=(d.getDay()+6)%7;}
+function setWdate(k){var d=pd(k);if(d.getDay()===0)d=addDays(d,1);wdate=dsel=key(d);wday=(d.getDay()+6)%7;}
 function fromTagA(l){return l.from?'<span class="tag">с '+pd(l.from).getDate()+' '+MONS[pd(l.from).getMonth()]+'</span>':'';}
 function rWeek(){
   var d=pd(wdate), wt=weekType(d), mon=mondayOf(d);
   var h='<div class="card"><div class="dnav"><button class="nb" data-a="wprev" aria-label="Предыдущая неделя">‹</button><input type="date" id="wday" value="'+wdate+'"><button class="nb" data-a="wnext" aria-label="Следующая неделя">›</button></div>'
     +'<div class="list-h"><b>'+DFULL[d.getDay()]+', '+d.getDate()+' '+MONF[d.getMonth()]+'</b><span class="tag solid">'+WEEKS[wt]+'</span></div>'
     +'<div class="seg" id="wdays">'+DSHORT.map(function(n,i){var x=addDays(mon,i);return '<button data-a="wday" data-k="'+key(x)+'" aria-pressed="'+(i===wday)+'">'+n+' '+x.getDate()+'</button>';}).join("")+'</div></div><div class="cards">';
+  var by=baseFor(d);
   data.bells.forEach(function(bl,bi){
-    var p=bi+1, top=p+" пара";
+    var p=bi+1, top=p+" пара", b=by[p], c=changeOf(wdate,p), P=' data-p="'+p+'"';
+    // На эту дату есть замена, отмена или разовая правка: показываем её
+    if(c&&c.cancel&&b){h+=lcard({l:b,top:top,t1:bl[0],t2:bl[1],cls:" cancel",tags:tagT(b.t)+'<span class="tag">Отменена</span>',
+      extra:'<div class="was">Только в этот день</div>',acts:'<button class="btn ghost sm" data-a="restore"'+P+'>Вернуть пару</button>'});return;}
+    if(c&&c.ed&&b){h+=lcard({l:c,top:top,t1:bl[0],t2:bl[1],cls:" subst",tags:tagT(c.t)+'<span class="tag on">Изменено</span>',
+      extra:'<div class="was">Только в этот день'+(edDiff(b,c)?'. Обычно: '+esc(edDiff(b,c)):'')+'</div>',
+      acts:'<button class="btn ghost sm" data-a="once"'+P+'>Изменить</button><button class="btn ghost sm" data-a="restore"'+P+'>Вернуть как было</button>'});return;}
+    if(c&&!c.cancel){h+=lcard({l:c,top:top,t1:bl[0],t2:bl[1],cls:" subst",tags:tagT(c.t)+'<span class="tag on">'+(b?"Замена":"Доп. пара")+'</span>',
+      extra:(b||c.was?'<div class="was">Вместо: '+esc(c.was||short(b))+'</div>':''),
+      acts:'<button class="btn ghost sm" data-a="once"'+P+'>Изменить</button><button class="btn ghost sm" data-a="sub"'+P+'>Другая пара</button><button class="btn ghost sm" data-a="restore"'+P+'>'+(b?"Вернуть как было":"Убрать")+'</button>'});return;}
     var all=data.lessons.map(function(l,i){return {l:l,i:i};}).filter(function(x){return x.l.d===wday&&x.l.p===p;});
     var arr=all.filter(function(x){return x.l.w==="all"||x.l.w===wt;});
     if(!arr.length){
       var sw=all.length?wt:"all"; // если в этом месте стоит пара на другую неделю, новая будет только на эту
-      h+=addCard(top,bl[0],bl[1],'data-a="addl" data-p="'+p+'" data-w="'+sw+'"',"Добавить пару",sw==="all"?"Свободно":"Свободно, только "+WEEKS[wt].toLowerCase());
+      h+='<article class="lc add free"><div class="lt"><small>'+top+'</small><b>'+bl[0]+'</b><span>'+bl[1]+'</span></div><div class="lb"><span class="lm">'+(sw==="all"?"Свободно":"Свободно, только "+WEEKS[wt].toLowerCase())+'</span>'
+        +'<div class="acts"><button class="btn ghost sm" data-a="addl" data-p="'+p+'" data-w="'+sw+'">'+I_PLUS+'Постоянная пара</button><button class="btn ghost sm" data-a="sub"'+P+'>'+I_PLUS+'Только на этот день</button></div></div></article>';
       return;
     }
     arr.forEach(function(x){
       var l=x.l, later=l.from&&l.from>wdate;
       h+=lcard({l:l,top:top,t1:bl[0],t2:bl[1],cls:later?" cancel":"",tap:'data-a="editl" data-i="'+x.i+'"',
         tags:tagT(l.t)+(l.w!=="all"?'<span class="tag on">'+WEEKS[l.w]+'</span>':'')+fromTagA(l),
-        extra:later?'<div class="was">В этот день ещё не идёт</div>':''});
+        extra:later?'<div class="was">В этот день ещё не идёт</div>':'',
+        acts:b===l?'<button class="btn ghost sm" data-a="once"'+P+'>Изменить на день</button><button class="btn ghost sm" data-a="sub"'+P+'>Заменить</button><button class="btn ghost sm" data-a="cancel"'+P+'>Отменить</button>':''});
     });
   });
   return h+'</div><button class="btn primary" data-a="addl">Новая пара</button>'
-    +'<p class="muted small" style="margin:0">Здесь постоянное расписание. Выберите любой день, и покажутся пары этого дня недели на его неделю (над или под чертой). Нажмите на карточку, чтобы изменить пару. Разовые изменения на конкретный день делайте во вкладке «Дни».</p>';
+    +'<p class="muted small" style="margin:0">Выберите день, и покажутся его пары. Нажмите на карточку, чтобы изменить пару в постоянном расписании. Кнопки под карточкой меняют только выбранный день: изменить, заменить или отменить пару.</p>'+rChanges();
 }
 
 // --- Сессия ---
@@ -873,7 +889,7 @@ $("main").addEventListener("click",function(e){
       toast(bs?"Замена поставлена":"Пара добавлена");
     });
   }
-  else if(a==="goto"){dsel=b.dataset.k;render();window.scrollTo(0,0);}
+  else if(a==="goto"){setWdate(b.dataset.k);render();window.scrollTo(0,0);}
   else if(a==="delch"){setChange(b.dataset.k,p,null);}
   else if(a==="clrpast"){var today=key(new Date());ask("Убрать прошедшие изменения?","Замены и отмены за прошедшие дни удалятся из списка.",function(){Object.keys(data.changes).forEach(function(k){if(k<today)delete data.changes[k];});dirty();},"Убрать");}
   else if(a==="wday"){setWdate(b.dataset.k);render();}
