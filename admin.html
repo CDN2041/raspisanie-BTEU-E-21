@@ -203,7 +203,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 42</footer>
+  <footer class="ver">v 43</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -292,6 +292,7 @@ function uniq(f){
 
 // Порядок полей и вид файла: одна пара на строку, чтобы в истории GitHub было видно, что поменялось
 function clean(x){
+  if(x._sw){var y={};for(var q in x)y[q]=x[q];y.lessons=x.alt.lessons;y.changes=x.alt.changes;y.alt={h:x.alt.h,lessons:x.lessons,changes:x.changes};y._sw=false;x=y;}
   function pick(o,ks){var r={};ks.forEach(function(k){if(o[k]!==undefined&&o[k]!==""&&o[k]!==null&&o[k]!==false)r[k]=o[k];});return r;}
   var out={updated:x.updated||0,anchor:x.anchor,anchorType:x.anchorType,start:x.start||undefined,end:x.end,bells:x.bells.map(function(b){return b[2]&&b[3]?[normTime(b[0]),normTime(b[1]),normTime(b[2]),normTime(b[3])]:[normTime(b[0]),normTime(b[1])];})};
   if(!out.start)delete out.start;
@@ -302,6 +303,19 @@ function clean(x){
     var a=x.changes[k].map(function(c){return c.cancel?pick(c,["p","cancel","was"]):pick(c,["p","s","t","tch","r","was","ed"]);});
     if(a.length)out.changes[k]=a;
   });
+  if(x.alt&&(x.alt.h||x.alt.lessons)){
+    out.alt={};
+    if(x.alt.h)out.alt.h=x.alt.h;
+    if(x.alt.lessons){
+      out.alt.lessons=x.alt.lessons.map(function(l){return pick(l,["d","p","w","s","t","tch","r","from"]);}).sort(function(a,b){return a.d-b.d||a.p-b.p||(a.w>b.w?1:a.w<b.w?-1:0);});
+      var ac={};
+      Object.keys(x.alt.changes||{}).sort().forEach(function(k){
+        var a=x.alt.changes[k].map(function(c){return c.cancel?pick(c,["p","cancel","was"]):pick(c,["p","s","t","tch","r","was","ed"]);});
+        if(a.length)ac[k]=a;
+      });
+      out.alt.changes=ac;
+    }
+  }
   // Справочник карточек пар: то, что админ создал сам (карточки из расписания добавляются автоматически)
   out.cards=(x.cards||[]).map(function(k){return {s:k.s,tch:k.tch||"",r:splitR(k.r)};})
     .sort(function(a,b){return a.s.localeCompare(b.s,"ru")||a.tch.localeCompare(b.tch,"ru");});
@@ -460,11 +474,12 @@ $("tok").addEventListener("keydown",function(e){if(e.key==="Enter")$("lbtn").cli
 $("tok").addEventListener("input",function(){$("lerr").hidden=true;$("lok").hidden=true;});
 
 // ---------- Вкладки ----------
-function paintTabs(){Array.prototype.forEach.call($("tabs").children,function(b){b.setAttribute("aria-pressed",b.dataset.v===(tab==="cards"?"gen":tab)?"true":"false");});}
+function paintTabs(){Array.prototype.forEach.call($("tabs").children,function(b){b.setAttribute("aria-pressed",b.dataset.v===(tab==="cards"||tab==="alt"?"gen":tab)?"true":"false");});}
 $("tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.v;paintTabs();render();window.scrollTo(0,0);});
 function render(){
   if(!data)return;
-  var h=tab==="days"?rDays():tab==="week"?rWeek():tab==="sess"?rSess():tab==="cards"?rCards():rGen();
+  syncAlt();
+  var h=tab==="days"?rDays():tab==="week"?rWeek():tab==="alt"&&altOpen?altHead()+rWeek():tab==="sess"?rSess():tab==="cards"?rCards():rGen();
   $("main").innerHTML=h;
   if(tab==="cards")paintCards();
   if(tab==="gen")loadVisits();
@@ -534,11 +549,57 @@ function rChanges(){
 var wdate=dsel, wday=(pd(wdate).getDay()+6)%7;
 function setWdate(k){var d=pd(k);if(d.getDay()===0)d=addDays(d,1);wdate=dsel=key(d);wday=(d.getDay()+6)%7;}
 function fromTagA(l){return l.from?'<span class="tag">с '+pd(l.from).getDate()+' '+MONS[pd(l.from).getMonth()]+'</span>':'';}
-function rWeek(){
-  var d=pd(wdate), wt=weekType(d), mon=mondayOf(d);
-  var h='<div class="card"><div class="dnav"><button class="nb" data-a="wprev" aria-label="Предыдущая неделя">‹</button><input type="date" id="wday" value="'+wdate+'"><button class="nb" data-a="wnext" aria-label="Следующая неделя">›</button></div>'
+function weekHead(d,wt,mon){
+  return '<div class="card"><div class="dnav"><button class="nb" data-a="wprev" aria-label="Предыдущая неделя">‹</button><input type="date" id="wday" value="'+wdate+'"><button class="nb" data-a="wnext" aria-label="Следующая неделя">›</button></div>'
     +'<div class="list-h"><b>'+DFULL[d.getDay()]+', '+d.getDate()+' '+MONF[d.getMonth()]+'</b><span class="tag solid">'+WEEKS[wt]+'</span></div>'
     +'<div class="seg" id="wdays">'+DSHORT.map(function(n,i){var x=addDays(mon,i);return '<button data-a="wday" data-k="'+key(x)+'" aria-pressed="'+(i===wday)+'">'+n+' '+x.getDate()+'</button>';}).join("")+'</div></div><div class="cards">';
+}
+// --- Телефон 2: правки, которые видны только на телефоне с включённым режимом ---
+function sha256(m){
+  function R(n,x){return (x>>>n)|(x<<(32-n));}
+  var K=[],H=[],i,j,pr=0,c=2;
+  while(pr<64){for(j=2;j*j<=c;j++)if(c%j===0)break;if(j*j>c){if(pr<8)H[pr]=(Math.pow(c,1/2)*4294967296)|0;K[pr++]=(Math.pow(c,1/3)*4294967296)|0;}c++;}
+  m=unescape(encodeURIComponent(m));var l=m.length*8,w=[];for(i=0;i<m.length;i++)w[i>>2]|=m.charCodeAt(i)<<((3-i%4)*8);
+  w[m.length>>2]|=0x80<<((3-m.length%4)*8);w[((m.length+8>>6)<<4)+15]=l;
+  for(i=0;i<w.length;i+=16){var a=H.slice(0),W=[];for(j=0;j<64;j++){
+    if(j<16)W[j]=w[i+j]|0;else{var s0=R(7,W[j-15])^R(18,W[j-15])^(W[j-15]>>>3),s1=R(17,W[j-2])^R(19,W[j-2])^(W[j-2]>>>10);W[j]=(W[j-16]+s0+W[j-7]+s1)|0;}
+    var t1=(a[7]+(R(6,a[4])^R(11,a[4])^R(25,a[4]))+((a[4]&a[5])^(~a[4]&a[6]))+K[j]+W[j])|0,t2=((R(2,a[0])^R(13,a[0])^R(22,a[0]))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+    a=[(t1+t2)|0].concat(a);a[4]=(a[4]+t1)|0;a.length=8;}
+    for(j=0;j<8;j++)H[j]=(H[j]+a[j])|0;}
+  return H.map(function(x){return ("00000000"+(x>>>0).toString(16)).slice(-8);}).join("");
+}
+var altOpen=false;
+function altHash(k){return sha256("pary-e21-alt|"+k);}
+function openAlt(){
+  var has=!!(data.alt&&data.alt.h);
+  openForm("Редактор 2",has?"Введите второй ключ":"Придумайте второй ключ. Его нельзя будет восстановить, только сменить, зная старый",[F("k","Второй ключ","password","")],function(v){
+    if(!v.k)return "Введите ключ";
+    if(has){if(altHash(v.k)!==data.alt.h)return "Ключ не подходит";}
+    else{if(v.k.length<4)return "Минимум 4 символа";data.alt=data.alt||{changes:{}};data.alt.h=altHash(v.k);dirty();toast("Ключ задан. Не забудьте сохранить");}
+    altOpen=true;altPrepare();dirty();setTimeout(function(){tab="alt";paintTabs();render();window.scrollTo(0,0);},0);
+  });
+}
+// Редактор 2: у телефона 2 своё полное расписание (пары и изменения по дням).
+// Пока открыт Редактор 2, его расписание подставляется на место общего, и вкладка «Неделя» работает с ним.
+function swapAlt(){
+  data.alt=data.alt||{};
+  var L=data.lessons, C=data.changes;
+  data.lessons=data.alt.lessons||[]; data.changes=data.alt.changes||{};
+  data.alt.lessons=L; data.alt.changes=C; data._sw=!data._sw;
+}
+function syncAlt(){var want=tab==="alt"&&altOpen;if(!!data._sw!==want)swapAlt();}
+function altPrepare(){ // первый вход: копия общего расписания
+  data.alt=data.alt||{};
+  if(!data.alt.lessons){data.alt.lessons=JSON.parse(JSON.stringify(data.lessons));data.alt.changes=JSON.parse(JSON.stringify(data.changes||{}));}
+}
+function altHead(){
+  return '<button class="back" data-a="cardsback" style="align-self:flex-start"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>Общее</button><h2>Редактор 2</h2>'
+    +'<div class="card"><span class="small muted">Отдельное расписание для телефона 2, всё как во вкладке «Неделя». Замены, отмены и правки показываются там так же, как у всех. Включить режим на телефоне: в приложении 7 раз быстро нажать на номер версии внизу, так же выключается.</span>'
+    +'<button class="btn ghost sm" data-a="alt-reset">Скопировать общее расписание заново</button></div>';
+}
+function rWeek(){
+  var d=pd(wdate), wt=weekType(d), mon=mondayOf(d);
+  var h=weekHead(d,wt,mon);
   var by=baseFor(d);
   data.bells.forEach(function(bl,bi){
     var p=bi+1, top=p+" пара", b=by[p], c=changeOf(wdate,p), P=' data-p="'+p+'"';
@@ -660,7 +721,9 @@ function editCard(k0){var c=null;allCards().forEach(function(k){if(cardKey(k)===
 
 // Счётчик уникальных устройств (его пополняет приложение)
 function plural(n,a,b,c){var x=n%100,y=n%10;return x>10&&x<20?c:y===1?a:y>=2&&y<=4?b:c;}
+var visHtml="", visT=0;
 function loadVisits(){
+  if(visHtml&&Date.now()-visT<60000){var ve=$("visits");if(ve)ve.innerHTML=visHtml;return;} // не дёргаем счётчик на каждой перерисовке
   var G="https://abacus.jasoncameron.dev/get/cdn2041-raspisanie-bteu-e21/", t=day0(new Date()), names=["devices"], i;
   for(i=0;i<7;i++)names.push("d-"+key(addDays(t,-i)));
   function get(n){return fetch(G+n,{cache:"no-store"}).then(function(r){if(r.status===404)return 0;if(!r.ok)throw 0;return r.json().then(function(j){return +j.value||0;});});}
@@ -669,8 +732,8 @@ function loadVisits(){
     var h='<div class="vis"><span>Сегодня</span><b>'+v[1]+'</b></div><div class="vis"><span>Вчера</span><b>'+v[2]+'</b></div>';
     for(var k=3;k<8;k++){var d=addDays(t,-(k-1));h+='<div class="vis muted"><span>'+sdate(key(d))+', '+d.getDate()+' '+MONF[d.getMonth()]+'</span><b>'+v[k]+'</b></div>';}
     h+='<div class="vis"><span>Всего устройств</span><b>'+v[0]+'</b></div>';
-    el.innerHTML=h;
-  }).catch(function(){var el=$("visits");if(el)el.textContent="Не удалось загрузить";});
+    el.innerHTML=visHtml=h; visT=Date.now();
+  }).catch(function(){visHtml="Не удалось загрузить";visT=Date.now();var el=$("visits");if(el)el.textContent=visHtml;});
 }
 function rGen(){
   var mon=mondayOf(new Date()), wt=weekType(mon), fri=addDays(mon,5);
@@ -695,6 +758,7 @@ function rGen(){
   h+='<div class="card"><span class="lbl">Посещения</span><span class="muted small">Уникальные устройства: сколько разных телефонов открывали приложение за сутки</span><div id="visits">Загружаю</div></div>';
   if(DEMO)h+='<div class="card"><span class="lbl">Демо</span><span class="small muted">Изменения хранятся только в этом браузере и видны в демо-расписании.</span><button class="btn danger" data-a="reset">Сбросить черновик</button></div>';
   h+='<div class="card"><span class="lbl">Аккаунт</span><span class="small muted">Ключ GitHub хранится только на этом устройстве.</span><button class="btn danger" data-a="logout">Выйти</button></div>';
+  h+='<button class="btn ghost tap-card" data-a="alt-open"><span><b>Редактор 2</b><span class="muted small">Вход по второму ключу</span></span><span class="chev">›</span></button>';
   return h;
 }
 
@@ -889,6 +953,8 @@ $("main").addEventListener("click",function(e){
   if(a==="dprev"||a==="dnext"){var d=addDays(pd(dsel),a==="dprev"?-1:1);if(d.getDay()===0)d=addDays(d,a==="dprev"?-1:1);dsel=key(d);render();}
   else if(a==="cancel"){var bl=baseFor(pd(dsel))[p];setChange(dsel,p,{p:p,cancel:true,was:short(bl)});toast("Пара отменена");}
   else if(a==="restore"){setChange(dsel,p,null);}
+  else if(a==="alt-open"){if(altOpen){altPrepare();tab="alt";paintTabs();render();window.scrollTo(0,0);}else openAlt();}
+  else if(a==="alt-reset"){ask("Скопировать заново?","Расписание телефона 2 заменится копией общего. Его правки пропадут.",function(){swapAlt();data.alt.lessons=JSON.parse(JSON.stringify(data.lessons));data.alt.changes=JSON.parse(JSON.stringify(data.changes||{}));swapAlt();dirty();},"Скопировать");}
   else if(a==="once"){
     // Разовая правка карточки: меняется только эта дата, постоянное расписание не трогается
     var bo=baseFor(pd(dsel))[p], co=changeOf(dsel,p), src=co&&!co.cancel?co:bo, isSub=co&&!co.cancel&&!co.ed;

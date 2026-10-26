@@ -176,6 +176,9 @@ h1{font-family:var(--font-d);font-weight:700;font-size:28px;line-height:1.1;marg
 .h-row .r{font-family:var(--font-m);font-size:13px;color:var(--muted)}
 .h-row .np{width:6px;height:6px;border-radius:50%;background:var(--note);display:inline-block;margin-left:6px;vertical-align:middle}
 .h-done{font-family:var(--font-d);font-weight:700;font-size:27px;line-height:1.15;margin:0}
+.h-cancel{display:flex;gap:10px;align-items:center;border:1px dashed var(--line);border-radius:14px;padding:10px 14px;color:var(--muted);font-size:14px;min-width:0}
+.h-cancel .ico{width:16px;height:16px;flex:none}
+.h-cancel span{min-width:0;overflow-wrap:anywhere}
 .h-all{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px;font-weight:600}
 
 .ver{margin-top:auto;padding-top:24px;text-align:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -290,7 +293,7 @@ a.btn[aria-busy="true"]{opacity:.6;pointer-events:none}
     <nav class="days" id="days"></nav>
     <section class="list" id="list"></section>
   </section>
-  <footer class="ver">v 42</footer>
+  <footer class="ver">v 43</footer>
 </div>
 
 <div class="sheet" id="wsheet" hidden>
@@ -354,7 +357,8 @@ var KGEN={exam:"экзамена",credit:"зачёта",consult:"консуль�
 var KSHORT={exam:"экз.",credit:"зач.",consult:"конс.",other:"соб."};
 
 // Заполняются из schedule.json в prepare()
-var ANCHOR,ANCHOR_T,LAST,END_ALL,PAIRS,BYDAY,CHANGES,SESSION,LASTM,FIRST,FIRSTM;
+var ANCHOR,ANCHOR_T,LAST,END_ALL,PAIRS,BYDAY,CHANGES,P2=false,SESSION,LASTM,FIRST,FIRSTM;
+var P2KEY="pary-e21-p2"; // режим «телефон 2»: свои правки поверх общего расписания
 
 // ---------- Справочники ----------
 var DSHORT=["Пн","Вт","Ср","Чт","Пт","Сб"];
@@ -400,12 +404,15 @@ function prepare(x){
   PAIRS=[null].concat(x.bells);
   // Пятиминутка внутри пары задаётся в звонках явно: [начало, конец, начало перерыва, конец перерыва]
   function fill(l){var b=PAIRS[l.p];l.a=toMin(b[0]);l.b=toMin(b[1]);l.h1=b[2]&&b[3]?toMin(b[2]):null;l.h2=l.h1!==null?toMin(b[3]):null;return l;}
+  P2=getRaw(P2KEY)==="1"&&!!(x.alt&&Array.isArray(x.alt.lessons));
+  if(P2)x={anchor:x.anchor,anchorType:x.anchorType,start:x.start,end:x.end,bells:x.bells,session:x.session,lessons:JSON.parse(JSON.stringify(x.alt.lessons)),changes:JSON.parse(JSON.stringify(x.alt.changes||{}))};
   BYDAY=[[],[],[],[],[],[]];
   x.lessons.forEach(function(l){if(PAIRS[l.p]&&l.d>=0&&l.d<6)BYDAY[l.d].push(fill(l));});
   BYDAY.forEach(function(a){a.sort(byP);});
   CHANGES={};
   var ch=x.changes||{};
   for(var k in ch)if(Array.isArray(ch[k]))CHANGES[k]=ch[k].filter(function(c){return PAIRS[c.p];}).map(fill);
+
   SESSION=null; END_ALL=LAST;
   var s=x.session;
   if(s&&DATE_RE.test(s.from||"")&&DATE_RE.test(s.to||"")){
@@ -434,7 +441,7 @@ function buildDay(d,k){
   if(!ch)return list;
   var by={};
   list.forEach(function(l){by[l.p]=l;});
-  ch.forEach(function(c){
+  (ch||[]).forEach(function(c){
     var base=by[c.p];
     if(c.cancel){if(base)by[c.p]=ext(base,{cancel:true});return;}
     if(c.ed&&base){by[c.p]=ext(base,{s:c.s,t:c.t,tch:c.tch,r:c.r,ed:true});return;} // разовая правка карточки
@@ -598,11 +605,16 @@ function dayLabel(nd,td){
   return dd===1?"Завтра":dd===2?"Послезавтра":WHEN[nd.getDay()]+", "+nd.getDate()+" "+MONF[nd.getMonth()];
 }
 
+var I_X=svg('<path d="M18 6 6 18M6 6l12 12"/>');
+function cancelNote(arr){
+  return arr.map(function(l){return '<div class="h-cancel">'+I_X+'<span>Отменена '+l.p+' пара, '+PAIRS[l.p][0]+': <s>'+esc(l.s)+'</s></span></div>';}).join("");
+}
 function renderHome(anim){
   var t=new Date(), td=day0(t), m=nowMin(t), all=lessonsFor(td), list=active(all), its=itemsFor(td), sd=studyDay(t);
   var wk=afterEnd(td)?"":inSession(td)||inSession(sd)?"сессия":(td.getTime()!==sd.getTime()?(td.getDay()===0?"с завтра ":"с понедельника "):"")+weekName(sd);
   var h='<div class="h-date"><div class="h-day"><span class="eyebrow">Сегодня'+(wk?' · '+wk:'')+'</span><b>'+DAYS_FULL[td.getDay()]+', '+td.getDate()+' '+MONF[td.getMonth()]+'</b></div>'
     +'<button class="iconbtn" data-act="settings" aria-label="Настройки">'+I_GEAR+'</button></div>';
+  h+=cancelNote(all.filter(function(l){return l.cancel&&l.b>m;})); // отменённые пары сегодня, которые ещё не прошли
   var cur=null,next=null,prev=null;
   list.forEach(function(l){
     if(m>=l.a&&m<l.b)cur=l; else if(l.a>m){if(!next)next=l;} else prev=l;});
@@ -643,7 +655,7 @@ function renderHome(anim){
     var done=list.length?"Пары на сегодня закончились":inSession(td)?"Сегодня экзаменов нет":td>END_ALL?"Учёба закончилась":td>LAST?"Занятия закончились":"Сегодня пар нет";
     h+='<p class="h-done">'+done+'</p>';
     if(nd&&nl.length){
-      h+=sec(dayLabel(nd,td)+", первая в "+PAIRS[nl[0].p][0])+lessonHead(nl[0])+noteBlock(nl[0],nd);
+      h+=sec(dayLabel(nd,td)+", первая в "+PAIRS[nl[0].p][0])+cancelNote(lessonsFor(nd).filter(function(l){return l.cancel;}))+lessonHead(nl[0])+noteBlock(nl[0],nd);
     }else if(nd){
       var it=ni[0], dd=Math.round((nd-td)/864e5);
       if(dd>1)h+='<div class="h-count"><div class="h-big"><b>'+dd+' '+plural(dd,"день","дня","дней")+'</b><span>до '+KGEN[it.kind]+'</span></div></div>';
@@ -913,6 +925,19 @@ applyTheme();
 var first=draft()||load(CACHE_KEY,null);
 if(!(valid(first)&&boot(first)))showMsg("Загрузка","Получаем расписание");
 fetchSched();
+// 7 быстрых нажатий на номер версии включают или выключают режим «телефон 2»
+(function(){
+  var ver=document.querySelector(".ver"), n=0, t=null;
+  if(!ver)return;
+  ver.addEventListener("click",function(){
+    clearTimeout(t); t=setTimeout(function(){n=0;},1500);
+    if(++n<7)return; n=0;
+    var on=getRaw(P2KEY)==="1";
+    try{if(on)localStorage.removeItem(P2KEY);else localStorage.setItem(P2KEY,"1");}catch(e){}
+    var txt=ver.textContent; ver.textContent=on?"·":"··"; setTimeout(function(){ver.textContent=txt;},900);
+    var d=draft()||load(CACHE_KEY,null); if(valid(d))boot(d);
+  });
+})();
 // Скрытый счётчик (в демо не считаем): всего устройств и уникальные устройства за каждые сутки
 var COUNT_BASE="https://abacus.jasoncameron.dev/hit/cdn2041-raspisanie-bteu-e21/";
 function countOnce(name,flagKey,flagVal){
