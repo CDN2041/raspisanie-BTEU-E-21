@@ -290,7 +290,7 @@ a.btn[aria-busy="true"]{opacity:.6;pointer-events:none}
     <nav class="days" id="days"></nav>
     <section class="list" id="list"></section>
   </section>
-  <footer class="ver">v 41</footer>
+  <footer class="ver">v 42</footer>
 </div>
 
 <div class="sheet" id="wsheet" hidden>
@@ -913,6 +913,15 @@ applyTheme();
 var first=draft()||load(CACHE_KEY,null);
 if(!(valid(first)&&boot(first)))showMsg("Загрузка","Получаем расписание");
 fetchSched();
+// Скрытый счётчик (в демо не считаем): всего устройств и уникальные устройства за каждые сутки
+var COUNT_BASE="https://abacus.jasoncameron.dev/hit/cdn2041-raspisanie-bteu-e21/";
+function countOnce(name,flagKey,flagVal){
+  if(DEMO||getRaw(flagKey)===flagVal)return;
+  fetch(COUNT_BASE+name).then(function(r){if(r.ok){try{localStorage.setItem(flagKey,flagVal);}catch(e){}}}).catch(function(){});
+}
+function countVisit(){countOnce("devices","pary-e21-counted","1");countOnce("d-"+key(new Date()),"pary-e21-counted-day",key(new Date()));}
+countVisit();
+document.addEventListener("visibilitychange",function(){if(!document.hidden)countVisit();}); // приложение могли не закрывать со вчера
 document.addEventListener("visibilitychange",function(){
   if(document.hidden){clearTimeout(timer);return;}
   if(Date.now()-lastFetch>60000)fetchSched();

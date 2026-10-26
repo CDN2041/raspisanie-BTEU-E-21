@@ -96,6 +96,7 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .lr small{font-family:var(--font-b);color:var(--muted);font-size:12px}
 .was{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .lc .pen{position:absolute;top:10px;right:10px;width:32px;height:32px;display:grid;place-items:center;color:var(--muted)}
+.vis{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.vis:last-child{border-bottom:0}
 .lc .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .addl{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--fg)}
 .mini{border:1px dashed var(--line);border-radius:12px;padding:10px;color:var(--muted);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:-4px}
@@ -202,7 +203,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 41</footer>
+  <footer class="ver">v 42</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -466,6 +467,7 @@ function render(){
   var h=tab==="days"?rDays():tab==="week"?rWeek():tab==="sess"?rSess():tab==="cards"?rCards():rGen();
   $("main").innerHTML=h;
   if(tab==="cards")paintCards();
+  if(tab==="gen")loadVisits();
 }
 function tagT(t){return t?'<span class="tag'+(t==="prac"?" solid":" on")+'">'+TYPES[t]+'</span>':"";}
 function lessonLines(l){return '<span class="s">'+esc(l.s)+'</span><span class="m">'+esc([l.tch,l.r?"ауд. "+l.r:""].filter(Boolean).join(" · "))+'</span>';}
@@ -656,6 +658,20 @@ $("fpanel").addEventListener("keydown",function(e){if(e.target.id==="ce-r"&&e.ke
 function newCard(){cardEditor({},true);}
 function editCard(k0){var c=null;allCards().forEach(function(k){if(cardKey(k)===k0)c=k;});if(c)cardEditor(c,false);}
 
+// Счётчик уникальных устройств (его пополняет приложение)
+function plural(n,a,b,c){var x=n%100,y=n%10;return x>10&&x<20?c:y===1?a:y>=2&&y<=4?b:c;}
+function loadVisits(){
+  var G="https://abacus.jasoncameron.dev/get/cdn2041-raspisanie-bteu-e21/", t=day0(new Date()), names=["devices"], i;
+  for(i=0;i<7;i++)names.push("d-"+key(addDays(t,-i)));
+  function get(n){return fetch(G+n,{cache:"no-store"}).then(function(r){if(r.status===404)return 0;if(!r.ok)throw 0;return r.json().then(function(j){return +j.value||0;});});}
+  Promise.all(names.map(get)).then(function(v){
+    var el=$("visits"); if(!el)return;
+    var h='<div class="vis"><span>Сегодня</span><b>'+v[1]+'</b></div><div class="vis"><span>Вчера</span><b>'+v[2]+'</b></div>';
+    for(var k=3;k<8;k++){var d=addDays(t,-(k-1));h+='<div class="vis muted"><span>'+sdate(key(d))+', '+d.getDate()+' '+MONF[d.getMonth()]+'</span><b>'+v[k]+'</b></div>';}
+    h+='<div class="vis"><span>Всего устройств</span><b>'+v[0]+'</b></div>';
+    el.innerHTML=h;
+  }).catch(function(){var el=$("visits");if(el)el.textContent="Не удалось загрузить";});
+}
 function rGen(){
   var mon=mondayOf(new Date()), wt=weekType(mon), fri=addDays(mon,5);
   var h='<button class="btn ghost tap-card" data-a="cards"><span><b>Карточки пар</b><span class="muted small">Изменить, удалить или добавить карточки</span></span><span class="chev">›</span></button>';
@@ -676,6 +692,7 @@ function rGen(){
     h+='</div>';
   });
   h+='<button class="btn ghost" data-a="addbell">Добавить пару</button><span class="muted small">Пятиминутка показывается в приложении ровно в указанное время. Без неё пара идёт без перерыва.</span></div>';
+  h+='<div class="card"><span class="lbl">Посещения</span><span class="muted small">Уникальные устройства: сколько разных телефонов открывали приложение за сутки</span><div id="visits">Загружаю</div></div>';
   if(DEMO)h+='<div class="card"><span class="lbl">Демо</span><span class="small muted">Изменения хранятся только в этом браузере и видны в демо-расписании.</span><button class="btn danger" data-a="reset">Сбросить черновик</button></div>';
   h+='<div class="card"><span class="lbl">Аккаунт</span><span class="small muted">Ключ GitHub хранится только на этом устройстве.</span><button class="btn danger" data-a="logout">Выйти</button></div>';
   return h;
