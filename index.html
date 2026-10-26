@@ -293,7 +293,7 @@ a.btn[aria-busy="true"]{opacity:.6;pointer-events:none}
     <nav class="days" id="days"></nav>
     <section class="list" id="list"></section>
   </section>
-  <footer class="ver">v 43</footer>
+  <footer class="ver">v 44</footer>
 </div>
 
 <div class="sheet" id="wsheet" hidden>
@@ -925,13 +925,13 @@ applyTheme();
 var first=draft()||load(CACHE_KEY,null);
 if(!(valid(first)&&boot(first)))showMsg("Загрузка","Получаем расписание");
 fetchSched();
-// 7 быстрых нажатий на номер версии включают или выключают режим «телефон 2»
+// 20 быстрых нажатий на номер версии включают или выключают режим «телефон 2»
 (function(){
   var ver=document.querySelector(".ver"), n=0, t=null;
   if(!ver)return;
   ver.addEventListener("click",function(){
     clearTimeout(t); t=setTimeout(function(){n=0;},1500);
-    if(++n<7)return; n=0;
+    if(++n<20)return; n=0;
     var on=getRaw(P2KEY)==="1";
     try{if(on)localStorage.removeItem(P2KEY);else localStorage.setItem(P2KEY,"1");}catch(e){}
     var txt=ver.textContent; ver.textContent=on?"·":"··"; setTimeout(function(){ver.textContent=txt;},900);
