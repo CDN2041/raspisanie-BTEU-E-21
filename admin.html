@@ -168,6 +168,8 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
   .cdlg.closing .cbox{animation:popOut .25s ease both}
   .toast{animation:toastIn .35s var(--ios) both}
   #main>*{animation:inUp .4s var(--ios) both}
+  #main.still>*{animation:none}
+  #main.still.dayflip .cards>*{animation:inUp .35s var(--ios) both}
   button{transition:transform .25s var(--ios),opacity .2s ease}
   button:active{transform:scale(.97);transition-duration:.08s}
 }
@@ -203,7 +205,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 45</footer>
+  <footer class="ver">v 46</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -484,7 +486,12 @@ function render(){
   if(!data)return;
   syncAlt();
   var h=tab==="days"?rDays():tab==="week"?rWeek():tab==="alt"&&altOpen?altHead()+rWeek():tab==="sess"?rSess():tab==="cards"?rCards():rGen();
-  $("main").innerHTML=h;
+  // Весь экран плавно появляется только при смене вкладки, при смене дня анимируются только пары
+  var m=$("main"), same=render.tab===tab;
+  m.classList.toggle("still",same); m.classList.remove("dayflip");
+  if(same&&render.day!==wdate&&(tab==="week"||tab==="alt"))m.classList.add("dayflip");
+  render.tab=tab; render.day=wdate;
+  m.innerHTML=h;
   if(tab==="cards")paintCards();
   if(tab==="gen")loadVisits();
 }
