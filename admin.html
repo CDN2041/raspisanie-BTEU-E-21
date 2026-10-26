@@ -203,7 +203,7 @@ code{font-family:var(--font-m);font-size:13px;background:var(--bg);padding:1px 5
     </div>
     <div id="main" style="display:flex;flex-direction:column;gap:16px;margin-top:16px"></div>
   </section>
-  <footer class="ver">v 44</footer>
+  <footer class="ver">v 45</footer>
 </div>
 
 <div class="savebar" id="savebar" hidden><div><span id="sbtxt">Есть несохранённые изменения</span><button class="btn ghost" id="undo">Отменить</button><button class="btn primary" id="savebtn">Сохранить</button></div></div>
@@ -429,7 +429,11 @@ function checkToken(t){
       var p=j.permissions||{};
       if(!(p.push||p.admin||p.maintain))throw new Error("Ключ настоящий, но у этого аккаунта нет доступа к редактору: его нет в соавторах репозитория. Попросите владельца добавить вас.");
       if(scopes!==null&&t.indexOf("ghp_")===0&&!/(^|,\s*)(public_repo|repo)(\s*,|$)/.test(scopes))throw new Error("У ключа не отмечено право public_repo, сохранять он не сможет. Создайте ключ заново кнопкой выше.");
-      return fetch("https://api.github.com/user",{headers:H,cache:"no-store"}).then(function(u){return u.ok?u.json():{};}).then(function(u){return {login:u.login||""};});
+      // Право записи проверяем делом: создаём пустой служебный объект, в историю он не попадает
+      return fetch("https://api.github.com/repos/"+REPO+"/git/blobs",{method:"POST",headers:H,cache:"no-store",body:JSON.stringify({content:"",encoding:"utf-8"})})
+        .catch(function(){throw new Error("Нет связи с GitHub. Проверьте интернет и попробуйте ещё раз.");})
+        .then(function(w){if(!w.ok)throw new Error("У ключа нет права на запись в этот репозиторий. Создайте ключ с доступом к "+REPO+" и правом Contents: Read and write.");})
+        .then(function(){return fetch("https://api.github.com/user",{headers:H,cache:"no-store"});}).then(function(u){return u.ok?u.json():{};}).then(function(u){return {login:u.login||""};});
     });
   },function(e){if(e&&e.message&&/ключ|GitHub|админ|право/i.test(e.message))throw e;throw new Error("Нет связи с GitHub. Проверьте интернет и попробуйте ещё раз.");});
 }
