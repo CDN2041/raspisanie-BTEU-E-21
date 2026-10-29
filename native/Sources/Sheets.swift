@@ -241,6 +241,9 @@ struct EditorWeb: UIViewRepresentable {
   func makeUIView(context: Context) -> WKWebView {
     let c = WKWebViewConfiguration()
     c.websiteDataStore = .default()
+    // Стекло для кнопок, вкладок и шторок редактора: только в приложении, сайт не меняется
+    let js = "var s=document.createElement('style');s.textContent=" + EditorWeb.glassCSS + ";document.documentElement.appendChild(s);"
+    c.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
     let w = WKWebView(frame: .zero, configuration: c)
     w.isOpaque = false
     w.backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: 0x050608) : UIColor(hex: 0xEDEFF3) }
@@ -251,6 +254,7 @@ struct EditorWeb: UIViewRepresentable {
     return w
   }
   func updateUIView(_ v: WKWebView, context: Context) {}
+  static let glassCSS = "\":root{--gl:rgba(255,255,255,.62);--gl-b:rgba(255,255,255,.7);--gl-h:rgba(255,255,255,.9);--gl-s:rgba(0,0,0,.08)}@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--gl:rgba(40,44,52,.5);--gl-b:rgba(255,255,255,.12);--gl-h:rgba(255,255,255,.22);--gl-s:rgba(0,0,0,.35)}}:root[data-theme=dark]{--gl:rgba(40,44,52,.5);--gl-b:rgba(255,255,255,.12);--gl-h:rgba(255,255,255,.22);--gl-s:rgba(0,0,0,.35)}.btn,.nb,.mini,.back,.x,.chip,.tap-card,.seg{background:var(--gl)!important;-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:.5px solid var(--gl-b)!important;box-shadow:inset 0 1px 0 var(--gl-h),0 6px 18px var(--gl-s)!important}.btn,.nb,.mini,.seg,.x,.chip{border-radius:999px!important}.btn.primary{background:var(--fg)!important;color:var(--bg)!important}.btn.danger{color:var(--warn)!important}.seg button{border-radius:999px!important}.seg button[aria-pressed=true]{box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}.tabs{-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%)}.panel,.cbox{background:color-mix(in srgb,var(--surface) 70%,transparent)!important;-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:.5px solid var(--gl-b)!important;box-shadow:inset 0 1px 0 var(--gl-h)!important}.panel{border-radius:32px 32px 0 0!important}.cbox{border-radius:28px!important}.btn,.nb,.mini,.seg button,.x,.chip,.tap-card{transition:transform .35s cubic-bezier(.32,.72,0,1)}.btn:active,.nb:active,.mini:active,.x:active,.chip:active,.tap-card:active{transform:scale(.95)}\""
 
   final class Co: NSObject, WKNavigationDelegate {
     let onClose: (Bool?) -> Void

@@ -346,6 +346,7 @@ struct SyncSchedule: ViewModifier {
   @EnvironmentObject var store: Store
   func body(content: Content) -> some View {
     content.task {
+      store.touch() // экран снова на виду: «сейчас» считаем от текущей минуты, а не от прошлой
       while !Task.isCancelled {
         await store.fetch()
         try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)

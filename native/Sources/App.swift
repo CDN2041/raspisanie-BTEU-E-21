@@ -51,13 +51,13 @@ struct RootView: View {
     .tint(C.fg)
     .preferredColorScheme(store.colorScheme)
     .sheet(isPresented: $nav.settings) {
-      SettingsSheet().environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme)
+      SettingsSheet().environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme).id(store.theme)
     }
     .sheet(item: $nav.note) { r in
-      NoteSheet(ref: r).environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme)
+      NoteSheet(ref: r).environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme).id(store.theme)
     }
     .sheet(isPresented: $nav.calendar) {
-      CalendarSheet().environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme)
+      CalendarSheet().environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme).id(store.theme)
     }
     .fullScreenCover(isPresented: $nav.editor, onDismiss: { Task { await store.fetch(force: true) } }) {
       EditorView().environmentObject(store).environmentObject(nav)
@@ -69,7 +69,7 @@ struct RootView: View {
     }
     .onOpenURL { _ in nav.path = []; nav.note = nil; nav.settings = false; nav.calendar = false }
     .onChange(of: phase) { p in
-      if p == .active { Task { await store.fetch() } }
+      if p == .active { store.touch(); Task { await store.fetch() } }
     }
   }
 

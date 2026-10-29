@@ -11,7 +11,7 @@ struct FullView: View {
     Group {
       if let sc = store.sched {
         TimelineView(.everyMinute) { ctx in
-          let t = Shot.now ?? ctx.date
+          let t = Shot.now ?? max(ctx.date, store.shown)
           VStack(spacing: 0) {
             VStack(spacing: 16) {
               topBar

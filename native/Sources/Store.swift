@@ -30,6 +30,8 @@ final class Store: ObservableObject {
   @Published private(set) var p2 = false
   @Published private(set) var noFive = false
   @Published private(set) var rev = 0 // меняется с каждой новой версией расписания
+  @Published private(set) var shown = Date() // когда экран последний раз показывали
+  func touch() { shown = Date() }
 
   private var noteDays: Set<String> = []
   private var raw: [String: Any]?
@@ -76,7 +78,11 @@ final class Store: ObservableObject {
   }
 
   var now: Date { Shot.now ?? Date() }
-  var colorScheme: ColorScheme? { theme == "dark" ? .dark : theme == "light" ? .light : nil }
+  // Тема всегда явная: с nil открытые шторки не перекрашиваются
+  var colorScheme: ColorScheme {
+    theme == "dark" ? .dark : theme == "light" ? .light
+      : (UIScreen.main.traitCollection.userInterfaceStyle == .dark ? .dark : .light)
+  }
 
   @discardableResult
   private func boot(_ data: Data?) -> Bool {

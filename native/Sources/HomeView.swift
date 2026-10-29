@@ -10,7 +10,7 @@ struct HomeView: View {
     TimelineView(.everyMinute) { ctx in
       ScrollView {
         if let sc = store.sched {
-          content(sc, Shot.now ?? ctx.date)
+          content(sc, Shot.now ?? max(ctx.date, store.shown))
             .id(store.rev)
             .padding(.horizontal, 16).padding(.top, 8)
             .frame(maxWidth: 560).frame(maxWidth: .infinity)
