@@ -17,8 +17,9 @@ struct HomeView: View {
         }
       }
       .scrollIndicators(.hidden)
-      .refreshable { await store.fetch(force: true) }
+      .noBounce()
     }
+    .syncSchedule()
     .background(C.bg.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
     .navigationTitle("Сейчас")

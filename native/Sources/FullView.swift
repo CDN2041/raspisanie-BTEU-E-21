@@ -31,6 +31,7 @@ struct FullView: View {
     .background(C.bg.ignoresSafeArea())
     // Своя верхняя строка вместо системной: системная на iOS 26 после перехода оставляла пустоту сверху
     .toolbar(.hidden, for: .navigationBar)
+    .syncSchedule()
     .onChange(of: nav.sel) { _ in Haptic.pick() }
   }
 
@@ -146,7 +147,7 @@ struct FullView: View {
           if root { VersionFooter() }
         }
         .scrollIndicators(.hidden)
-        .refreshable { await store.fetch(force: true) }
+        .noBounce()
         .tag(d)
       }
     }

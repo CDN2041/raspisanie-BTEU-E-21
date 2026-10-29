@@ -333,3 +333,23 @@ struct VersionFooter: View {
       }
   }
 }
+
+extension View {
+  // Без резинки, если всё помещается на экран
+  @ViewBuilder func noBounce() -> some View {
+    if #available(iOS 16.4, *) { scrollBounceBehavior(.basedOnSize) } else { self }
+  }
+  // Пока экран открыт: проверяем расписание сразу и потом раз в пять минут, без жеста «потянуть вниз»
+  func syncSchedule() -> some View { modifier(SyncSchedule()) }
+}
+struct SyncSchedule: ViewModifier {
+  @EnvironmentObject var store: Store
+  func body(content: Content) -> some View {
+    content.task {
+      while !Task.isCancelled {
+        await store.fetch()
+        try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)
+      }
+    }
+  }
+}
