@@ -52,7 +52,7 @@ struct WSmall: View {
       .font(.m(11)).padding(.top, 7)
       .overlay(alignment: .top) { Rectangle().fill(C.line).frame(height: 1) }
     } else if st.last {
-      Text("Последняя на сегодня").font(.m(11)).foregroundColor(C.muted)
+      Text("Последняя на сегодня").font(.m(11)).foregroundColor(C.muted).lineLimit(1).minimumScaleFactor(0.7)
         .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 7)
         .overlay(alignment: .top) { Rectangle().fill(C.line).frame(height: 1) }
     }
