@@ -7,7 +7,7 @@ struct LessonHead: View {
     VStack(alignment: .leading, spacing: 8) {
       Tags(list: tags(l, nil))
       // Длинное слово не влезает в строку на телефоне: шрифт чуть меньше, чтобы слово не рвалось
-      let long = (l.s.split(separator: " ").map { $0.count }.max() ?? 0) > 13
+      let long = l.s.components(separatedBy: " ").contains { $0.count > 13 }
       Text(l.s).font(.d(long ? 22 : 27, 700)).lineSpacing(2).foregroundColor(C.fg).fixedSize(horizontal: false, vertical: true)
       if !l.tch.isEmpty || !l.r.isEmpty {
         FlowRow(spacing: 14) {
