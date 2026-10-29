@@ -7,7 +7,7 @@ struct WidgetGallery: View {
   var body: some View {
     ScrollView {
       if let sc = store.sched {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
           ForEach(times, id: \.self) { s in
             let t = Shot.parse(s) ?? Date(), st = widgetState(sc, t)
             Text(s).font(.m(11)).foregroundColor(.gray)
@@ -18,7 +18,7 @@ struct WidgetGallery: View {
                 HStack(spacing: 8) { lock(WCirc(st: st), w: 64, h: 64); Text(st.inline).font(.m(11)).foregroundColor(.white).lineLimit(2) }
               }
             }
-            tile(WMedium(st: st), w: 338)
+            if s == times.first || s == times.last { tile(WMedium(st: st), w: 338) }
           }
         }.padding(16)
       }

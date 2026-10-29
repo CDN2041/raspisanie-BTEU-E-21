@@ -4,7 +4,7 @@
       "layers": [
         {
           "glass": true,
-          "image-name": "cap.svg",
+          "image-name": "cap.png",
           "name": "cap",
           "fill-specializations": [
             {
