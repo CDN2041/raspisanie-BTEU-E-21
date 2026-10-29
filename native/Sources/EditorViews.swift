@@ -290,37 +290,53 @@ struct EditorMain: View {
   }
 
   // ---------- Все изменения ----------
-  @ViewBuilder var changesList: some View {
-    let ks = ed.changes.keys.sorted(), today = key(Date())
-    VStack(alignment: .leading, spacing: 10) {
+  var changesList: some View {
+    let ks: [String] = ed.changes.keys.sorted()
+    let today = key(Date())
+    let rows: [(id: String, k: String, c: EChange)] = ks.flatMap { k in (ed.changes[k] ?? []).map { (id: k + "|\($0.p)", k: k, c: $0) } }
+    return VStack(alignment: .leading, spacing: 10) {
       HStack {
         Text("Все изменения").font(.d(19, 500)).foregroundColor(C.fg)
         Spacer()
         if ks.contains(where: { $0 < today }) { SmallBtn(title: "Убрать прошедшие") { withAnimation { ed.clearPast() } } }
       }
-      if ks.isEmpty { Text("Изменений нет").font(.b(15)).foregroundColor(C.muted).padding(.vertical, 8) }
-      ForEach(ks, id: \.self) { k in
-        ForEach(ed.changes[k] ?? [], id: \.self) { c in
-          let dd = pd(k)!, b = ed.baseFor(dd)[c.p]
-          HStack(spacing: 10) {
-            Button { Haptic.tap(); go(dd, exact: true) } label: {
-              VStack(alignment: .leading, spacing: 2) {
-                Text(DSHORT[min(5, wd(dd))] + ", \(dnum(dd)) " + MONF[mnum(dd)] + " · \(c.p) пара").font(.b(15, 600)).foregroundColor(C.fg)
-                Text(c.cancel ? "Отмена: " + (b.map { short($0.s, $0.tch) } ?? c.was)
-                     : (c.ed && b != nil ? "Изменено: " : b != nil ? "Замена: " : "Доп. пара: ") + short(c.s, c.tch))
-                  .font(.b(13)).foregroundColor(C.muted).lineLimit(2)
-              }.frame(maxWidth: .infinity, alignment: .leading)
-            }.buttonStyle(Press(scale: 0.98))
-            Button { Haptic.tap(); withAnimation { ed.setChange(k, c.p, nil) } } label: {
-              Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundColor(C.muted).frame(width: 36, height: 36).glass(Circle())
-            }.buttonStyle(Press(scale: 0.9))
-          }
-          .opacity(k < today ? 0.55 : 1)
-          .padding(.vertical, 4)
-        }
+      if rows.isEmpty { Text("Изменений нет").font(.b(15)).foregroundColor(C.muted).padding(.vertical, 8) }
+      ForEach(rows, id: \.id) { row in
+        ChangeRow(ed: ed, k: row.k, c: row.c, past: row.k < today, go: { go($0, exact: true) })
       }
     }
     .padding(14).card(20)
+  }
+}
+
+struct ChangeRow: View {
+  @ObservedObject var ed: Editor
+  let k: String, c: EChange, past: Bool
+  let go: (Date) -> Void
+  var title: String {
+    guard let dd = pd(k) else { return k }
+    return DSHORT[min(5, wd(dd))] + ", \(dnum(dd)) " + MONF[mnum(dd)] + " · \(c.p) пара"
+  }
+  var text: String {
+    let b: ELesson? = pd(k).flatMap { ed.baseFor($0)[c.p] }
+    if c.cancel { return "Отмена: " + (b.map { short($0.s, $0.tch) } ?? c.was) }
+    let kind = c.ed && b != nil ? "Изменено: " : b != nil ? "Замена: " : "Доп. пара: "
+    return kind + short(c.s, c.tch)
+  }
+  var body: some View {
+    HStack(spacing: 10) {
+      Button { Haptic.tap(); if let d = pd(k) { go(d) } } label: {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(title).font(.b(15, 600)).foregroundColor(C.fg)
+          Text(text).font(.b(13)).foregroundColor(C.muted).lineLimit(2)
+        }.frame(maxWidth: .infinity, alignment: .leading)
+      }.buttonStyle(Press(scale: 0.98))
+      Button { Haptic.tap(); withAnimation { ed.setChange(k, c.p, nil) } } label: {
+        Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundColor(C.muted).frame(width: 36, height: 36).glass(Circle())
+      }.buttonStyle(Press(scale: 0.9))
+    }
+    .opacity(past ? 0.55 : 1)
+    .padding(.vertical, 4)
   }
 }
 
