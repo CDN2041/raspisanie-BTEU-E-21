@@ -15,6 +15,7 @@ WX="$APP/PlugIns/ParyWidget.appex"
 mkdir -p "$WX"
 xcrun --sdk "$PLAT" swiftc -O -parse-as-library -application-extension -sdk "$SDK" -target "$TGT" \
   Widget/*.swift Sources/Model.swift Sources/Theme.swift Sources/Shared.swift Sources/WidgetState.swift Sources/WidgetViews.swift \
+  -Xlinker -e -Xlinker _NSExtensionMain -Xlinker -rpath -Xlinker @executable_path/../../Frameworks \
   -o "$WX/ParyWidget" > "$OUT/widget.log" 2>&1 || fail "$OUT/widget.log"
 cp Widget/Info.plist "$WX/Info.plist"
 plutil -replace CFBundleVersion -string "${BUILD_N:-1}" "$WX/Info.plist"
