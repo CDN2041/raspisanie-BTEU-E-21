@@ -107,6 +107,8 @@ struct EditorMain: View {
   @State private var forever: Int? = nil
   @State private var askClose = false
   @State private var askWeb = false
+  @State private var stripW: CGFloat = 1
+  @State private var dir = 1
   @Namespace private var ns
 
   var body: some View {
@@ -181,6 +183,7 @@ struct EditorMain: View {
           let x = addDays(mon, i), on = i == wd(d)
           Button {
             Haptic.pick()
+            dir = x > ed.date ? 1 : -1
             withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { ed.date = x }
           } label: {
             Text(DSHORT[i] + " \(dnum(x))").font(.b(14, on ? 600 : 500)).lineLimit(1).minimumScaleFactor(0.7)
@@ -190,14 +193,33 @@ struct EditorMain: View {
         }
       }
       .padding(3).glass(Capsule())
+      // Зажать и вести пальцем по дням: день меняется под пальцем
+      .background(GeometryReader { g in Color.clear.onAppear { stripW = g.size.width }.onChange(of: g.size.width) { stripW = $0 } })
+      .gesture(DragGesture(minimumDistance: 6).onChanged { v in
+        let i = max(0, min(5, Int(v.location.x / max(1, stripW / 6))))
+        let x = addDays(mon, i)
+        if x != ed.date {
+          Haptic.pick()
+          dir = x > ed.date ? 1 : -1
+          withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { ed.date = x }
+        }
+      })
     }
     .padding(14).card(20)
 
-    ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
-      slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
+    // Свайп по парам влево и вправо: соседний день
+    VStack(spacing: 10) {
+      ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
+        slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
+      }
     }
     .id(k)
-    .transition(.opacity)
+    .transition(.asymmetric(insertion: .offset(x: CGFloat(dir) * 40).combined(with: .opacity), removal: .opacity))
+    .simultaneousGesture(DragGesture(minimumDistance: 25).onEnded { v in
+      let dx = v.translation.width, dy = v.translation.height
+      guard abs(dx) > 60, abs(dx) > abs(dy) * 1.5 else { return }
+      shiftDay(dx < 0 ? 1 : -1)
+    })
 
     Btn(title: "Новая пара", kind: .primary) {
       form = FormRef(i: nil, l: { var l = ELesson(); l.d = wd(d); l.p = firstFree(wd(d)); l.t = "lec"; return l }())
@@ -207,6 +229,15 @@ struct EditorMain: View {
     changesList
   }
 
+  func shiftDay(_ n: Int) {
+    var x = addDays(ed.date, n)
+    if weekday(x) == 0 { x = addDays(x, n) }
+    if let s = ed.start, x < s { return }
+    if let e = ed.end, x > e { return }
+    Haptic.pick()
+    dir = n
+    withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) { ed.date = x }
+  }
   func firstFree(_ w: Int) -> Int {
     for p in 1...max(1, ed.bells.count) where !ed.lessons.contains(where: { $0.d == w && $0.p == p }) { return p }
     return 1
