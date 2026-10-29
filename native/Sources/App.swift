@@ -60,7 +60,7 @@ struct RootView: View {
       CalendarSheet().environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme).id(store.theme)
     }
     .fullScreenCover(isPresented: $nav.editor, onDismiss: { Task { await store.fetch(force: true) } }) {
-      EditorView().environmentObject(store).environmentObject(nav)
+      EditorRoot().environmentObject(store).environmentObject(nav).preferredColorScheme(store.colorScheme)
     }
     .task {
       shotSetup()
@@ -80,6 +80,7 @@ struct RootView: View {
     case "full": nav.path = ["full"]
     case "cal": nav.path = ["full"]; DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { nav.calendar = true }
     case "settings": DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { nav.settings = true }
+    case "editor": DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { nav.editor = true }
     case "note":
       let d = day0(store.now)
       if let l = sc.lessonsFor(d).first(where: { canNote($0) }) {

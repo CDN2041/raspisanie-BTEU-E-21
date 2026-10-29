@@ -28,7 +28,7 @@ if [ "$PLAT" = iphonesimulator ]; then
     plutil -replace DTPlatformName -string iphonesimulator "$P"
   done
 fi
-cp ../schedule.json "$APP/"
+cp ../schedule.json format.js "$APP/"
 cp build/fonts/*.ttf "$APP/"
 xcrun actool AppIcon.icon Assets.xcassets --compile "$APP" --platform "$PLAT" --minimum-deployment-target 16.0 \
   --app-icon AppIcon --target-device iphone --target-device ipad --output-partial-info-plist "$OUT/partial.plist" > "$OUT/icon.log" 2>&1 \

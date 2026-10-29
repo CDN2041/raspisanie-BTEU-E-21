@@ -43,6 +43,6 @@ shoot() { # устройство, префикс, экраны...
 PH=$(pick "iPhone" "Max"); PH=${PH:-$(pick "iPhone" "")}
 PAD=$(pick "iPad Pro 11" ""); PAD=${PAD:-$(pick "iPad" "mini")}
 echo "iPhone $PH, iPad $PAD"
-shoot "$PH" phone widgets:dark widgets:light home:dark full:dark note:dark home:light
+shoot "$PH" phone editor:dark editor:light home:dark full:dark widgets:dark
 [ -n "$PAD" ] && shoot "$PAD" ipad home:dark
 ls build/shots

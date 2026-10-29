@@ -120,6 +120,14 @@ final class Store: ObservableObject {
     }
   }
 
+  // Новая версия, только что сохранённая из редактора
+  func adopt(_ data: Data) {
+    guard Shared.parse(data) != nil else { return }
+    Shared.writeSchedule(data)
+    withAnimation(.easeInOut(duration: 0.35)) { _ = boot(data) }
+    reloadWidgets()
+  }
+
   // ---------- Заметки и настройки ----------
   func note(_ d: Date, _ l: Lesson) -> String? { canNote(l) ? notes[noteKey(d, l)] : nil }
   func dayHasNote(_ d: Date) -> Bool { noteDays.contains(key(d)) }
@@ -178,8 +186,10 @@ final class Store: ObservableObject {
 // Открывает пустую страницу с адресом сайта и читает его localStorage
 final class Migrator: NSObject, WKNavigationDelegate {
   private var web: WKWebView?
-  private let done: ([String: Any]?) -> Void
-  init(done: @escaping ([String: Any]?) -> Void) {
+  private let js: String
+  private let done: (Any?) -> Void
+  init(js: String, done: @escaping (Any?) -> Void) {
+    self.js = js
     self.done = done
     super.init()
     let c = WKWebViewConfiguration()
@@ -189,19 +199,21 @@ final class Migrator: NSObject, WKNavigationDelegate {
     web = w
     w.loadHTMLString("<html><body></body></html>", baseURL: SITE)
   }
-  func webView(_ w: WKWebView, didFinish n: WKNavigation!) {
-    let js = "JSON.stringify({n:localStorage.getItem('pary-notes-v1'),s:localStorage.getItem('pary-settings-v1'),p2:localStorage.getItem('pary-e21-p2'),nf:localStorage.getItem('pary-e21-nofive')})"
-    w.evaluateJavaScript(js) { [weak self] r, _ in
+  convenience init(done: @escaping ([String: Any]?) -> Void) {
+    self.init(js: "JSON.stringify({n:localStorage.getItem('pary-notes-v1'),s:localStorage.getItem('pary-settings-v1'),p2:localStorage.getItem('pary-e21-p2'),nf:localStorage.getItem('pary-e21-nofive')})") { r in
       var o: [String: Any]? = nil
       if let s = r as? String, let d = s.data(using: .utf8) { o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] }
-      DispatchQueue.main.async { self?.finish(o) }
+      done(o)
     }
+  }
+  func webView(_ w: WKWebView, didFinish n: WKNavigation!) {
+    w.evaluateJavaScript(js) { [weak self] r, _ in DispatchQueue.main.async { self?.finish(r) } }
   }
   func webView(_ w: WKWebView, didFail n: WKNavigation!, withError e: Error) { finish(nil) }
   func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) { finish(nil) }
-  private func finish(_ o: [String: Any]?) {
+  private func finish(_ r: Any?) {
     guard web != nil else { return }
     web = nil
-    done(o)
+    done(r)
   }
 }
