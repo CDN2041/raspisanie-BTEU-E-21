@@ -14,6 +14,7 @@ struct FullView: View {
           let t = Shot.now ?? ctx.date
           VStack(spacing: 0) {
             VStack(spacing: 16) {
+              topBar
               header(sc, t)
               weekNav(sc)
               strip(sc, t)
@@ -28,16 +29,29 @@ struct FullView: View {
       }
     }
     .background(C.bg.ignoresSafeArea())
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .navigationBarTrailing) {
-        Button { Haptic.tap(); nav.settings = true } label: { Image(systemName: "gearshape") }
-      }
-    }
+    // Своя верхняя строка вместо системной: системная на iOS 26 после перехода оставляла пустоту сверху
+    .toolbar(.hidden, for: .navigationBar)
     .onChange(of: nav.sel) { _ in Haptic.pick() }
   }
 
   // ---------- Шапка ----------
+  var topBar: some View {
+    HStack {
+      if !root {
+        Button { Haptic.tap(); nav.path.removeLast() } label: {
+          Image(systemName: "chevron.left").font(.system(size: 18, weight: .semibold)).foregroundColor(C.fg)
+            .frame(width: 44, height: 44).glass(Circle())
+        }.buttonStyle(Press(scale: 0.92))
+      }
+      Spacer()
+      Button { Haptic.tap(); nav.settings = true } label: {
+        Image(systemName: "gearshape").font(.system(size: 19, weight: .medium)).foregroundColor(C.fg)
+          .frame(width: 44, height: 44).glass(Circle())
+      }.buttonStyle(Press(scale: 0.92))
+    }
+    .padding(.top, 4)
+  }
+
   func header(_ sc: Sched, _ t: Date) -> some View {
     let sel = nav.sel, mon = mondayOf(sel)
     let n = weeksBetween(sc.studyDay(t), sel)

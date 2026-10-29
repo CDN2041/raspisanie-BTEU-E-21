@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct NoteRef: Identifiable {
   let key: String, title: String, label: String, day: Date
@@ -115,4 +116,13 @@ struct MessageView: View {
     .padding(16).frame(maxWidth: 560).frame(maxWidth: .infinity).background(C.bg.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
   }
+}
+
+// Свайп назад от края экрана работает и со скрытой системной шапкой
+extension UINavigationController: UIGestureRecognizerDelegate {
+  override open func viewDidLoad() {
+    super.viewDidLoad()
+    interactivePopGestureRecognizer?.delegate = self
+  }
+  public func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool { viewControllers.count > 1 }
 }
