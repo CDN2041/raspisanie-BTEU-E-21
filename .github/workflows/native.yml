@@ -1,0 +1,39 @@
+name: Native
+on:
+  workflow_dispatch:
+  push:
+    branches: [native]
+    paths: ["native/**", ".github/workflows/native.yml"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          [ -n "$X" ] || { echo "::error::Нет Xcode 26"; exit 1; }
+          sudo xcode-select -s "$X"
+      - name: Fonts
+        run: |
+          mkdir -p native/build/fonts && cd native/build/fonts
+          B=https://github.com/google/fonts/raw/main/ofl
+          curl -sSLf -o GolosText.ttf "$B/golostext/GolosText%5Bwght%5D.ttf"
+          curl -sSLf -o Unbounded.ttf "$B/unbounded/Unbounded%5Bwght%5D.ttf"
+          curl -sSLf -o JetBrainsMono.ttf "$B/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+      - name: Build simulator
+        run: native/build.sh iphonesimulator
+      - name: Screenshots
+        continue-on-error: true
+        run: native/shots.sh
+      - name: Build IPA
+        env: { BUILD_N: "${{ github.run_number }}" }
+        run: native/build.sh iphoneos
+      - name: Release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release delete native --yes --cleanup-tag || true
+          gh release create native native/pary-native.ipa $(ls native/build/shots/*.png 2>/dev/null) --prerelease --target native \
+            --title "Пары Е-21 нативная (тест)" --notes "Сборка ${{ github.run_number }}. Тестовая нативная версия для iPad и iPhone."

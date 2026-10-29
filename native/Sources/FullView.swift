@@ -1,0 +1,171 @@
+import SwiftUI
+
+// Полное расписание: неделя сверху, дни листаются пальцем
+struct FullView: View {
+  let root: Bool
+  @EnvironmentObject var store: Store
+  @EnvironmentObject var nav: Nav
+  @Namespace private var ns
+
+  var body: some View {
+    Group {
+      if let sc = store.sched {
+        TimelineView(.everyMinute) { ctx in
+          let t = Shot.now ?? ctx.date
+          VStack(spacing: 0) {
+            VStack(spacing: 16) {
+              header(sc, t)
+              weekNav(sc)
+              strip(sc, t)
+            }
+            .padding(.horizontal, 16).padding(.bottom, 12)
+            .frame(maxWidth: 560).frame(maxWidth: .infinity)
+            pager(sc, t)
+          }
+        }
+        .onAppear { nav.sel = sc.clamp(nav.sel) }
+        .onChange(of: store.rev) { _ in if let s = store.sched { nav.sel = s.clamp(nav.sel) } }
+      }
+    }
+    .background(C.bg.ignoresSafeArea())
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      ToolbarItem(placement: .navigationBarTrailing) {
+        Button { Haptic.tap(); nav.settings = true } label: { Image(systemName: "gearshape") }
+      }
+    }
+    .onChange(of: nav.sel) { _ in Haptic.pick() }
+  }
+
+  // ---------- Шапка ----------
+  func header(_ sc: Sched, _ t: Date) -> some View {
+    let sel = nav.sel, mon = mondayOf(sel)
+    let n = weeksBetween(sc.studyDay(t), sel)
+    let rel = n == 0 ? "эта неделя" : n == 1 ? "следующая неделя" : n == -1 ? "прошлая неделя" : n > 1 ? "через \(n) нед." : "\(-n) нед. назад"
+    let title = sc.weekInSession(mon) ? "Сессия" : sc.weekType(sel) == "over" ? "Над чертой" : "Под чертой"
+    return HStack(alignment: .bottom, spacing: 12) {
+      VStack(alignment: .leading, spacing: 4) {
+        Eyebrow(text: rel)
+        Text(title).font(.d(28, 700)).foregroundColor(C.fg)
+          .id(title).transition(.opacity.combined(with: .offset(y: 6)))
+      }
+      .animation(.spring(response: 0.45, dampingFraction: 0.85), value: title)
+      Spacer()
+      Button { Haptic.tap(); nav.calendar = true } label: {
+        Image(systemName: "calendar").font(.system(size: 24)).foregroundColor(C.fg)
+          .frame(width: 64, height: 52).card(14)
+      }.buttonStyle(Press(scale: 0.92))
+    }
+  }
+
+  func weekNav(_ sc: Sched) -> some View {
+    let mon = mondayOf(nav.sel), nd = shownDays(sc, mon)
+    let prevOff = sc.beforeStart(addDays(mon, -1)), nextOff = sc.afterEnd(addDays(mon, 7))
+    return HStack(spacing: 4) {
+      Button { go(sc, addDays(mon, -7)) } label: {
+        Image(systemName: "chevron.left").font(.system(size: 18, weight: .semibold)).frame(width: 36, height: 36)
+      }.buttonStyle(Press(scale: 0.85)).foregroundColor(C.muted).opacity(prevOff ? 0.25 : 1).disabled(prevOff)
+      Text(range(mon, nd)).font(.b(15, 600)).monospacedDigit().foregroundColor(C.fg).frame(maxWidth: .infinity)
+        .id(key(mon)).transition(.opacity)
+      Button { go(sc, addDays(mon, 7)) } label: {
+        Image(systemName: "chevron.right").font(.system(size: 18, weight: .semibold)).frame(width: 36, height: 36)
+      }.buttonStyle(Press(scale: 0.85)).foregroundColor(C.muted).opacity(nextOff ? 0.25 : 1).disabled(nextOff)
+      Button {
+        Haptic.tap()
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) { nav.sel = sc.clamp(sc.studyDay(store.now)) }
+      } label: {
+        Text("Сегодня").font(.b(15, 600)).foregroundColor(C.fg).padding(.horizontal, 12).frame(height: 36).card(10)
+      }.buttonStyle(Press())
+    }
+  }
+  // Листаем на первый день недели
+  func go(_ sc: Sched, _ mon: Date) {
+    Haptic.tap()
+    withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) { nav.sel = sc.clamp(mon) }
+  }
+  func shownDays(_ sc: Sched, _ mon: Date) -> Int { min(sc.daysIn(mon), max(1, daysBetween(mon, sc.endAll) + 1)) }
+  func range(_ mon: Date, _ n: Int) -> String {
+    let e = addDays(mon, n - 1)
+    return mnum(mon) == mnum(e) ? "\(dnum(mon))-\(dnum(e)) " + MONF[mnum(mon)] : "\(dnum(mon)) " + MON[mnum(mon)] + " - \(dnum(e)) " + MON[mnum(e)]
+  }
+
+  func strip(_ sc: Sched, _ t: Date) -> some View {
+    let mon = mondayOf(nav.sel), nd = shownDays(sc, mon), today = day0(t)
+    return HStack(spacing: 6) {
+      ForEach(0..<nd, id: \.self) { i in
+        let d = addDays(mon, i)
+        let c = sc.active(sc.lessonsFor(d)).count, its = sc.itemsFor(d)
+        let lbl = c > 0 ? "\(c) п." : !its.isEmpty ? (KSHORT[its[0].kind ?? "other"] ?? "") : "·"
+        let isSel = d == nav.sel, isToday = d == today, hn = store.dayHasNote(d), off = sc.beforeStart(d)
+        Button {
+          guard !off else { return }
+          withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { nav.sel = d }
+        } label: {
+          VStack(spacing: 2) {
+            Text(DSHORT[i].uppercased()).font(.b(12, 600)).tracking(0.5).foregroundColor(hn ? C.note : (isToday ? C.fg : C.muted))
+            Text("\(dnum(d))").font(.m(17, 700)).monospacedDigit().foregroundColor(hn ? C.note : (isSel || isToday ? C.fg : C.fg.opacity(0.75)))
+            Text(lbl).font(.b(11)).monospacedDigit().foregroundColor(hn ? C.note : C.muted)
+          }
+          .frame(maxWidth: .infinity).padding(.top, 8).padding(.bottom, 7)
+          .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(hn ? C.noteSoft : .clear))
+          .overlay {
+            if isSel {
+              RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(hn ? C.note : C.fg, lineWidth: 1.5)
+                .matchedGeometryEffect(id: "sel", in: ns)
+            }
+          }
+        }
+        .buttonStyle(Press(scale: 0.93))
+        .opacity(off ? 0.25 : 1)
+      }
+    }
+  }
+
+  // ---------- Дни ----------
+  func pager(_ sc: Sched, _ t: Date) -> some View {
+    TabView(selection: $nav.sel) {
+      ForEach(sc.allDays, id: \.self) { d in
+        ScrollView {
+          DayList(sc: sc, d: d, t: t)
+            .padding(.horizontal, 16).padding(.top, 4)
+            .frame(maxWidth: 560).frame(maxWidth: .infinity)
+          if root { VersionFooter() }
+        }
+        .scrollIndicators(.hidden)
+        .refreshable { await store.fetch(force: true) }
+        .tag(d)
+      }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+    .id(store.rev)
+  }
+}
+
+struct DayList: View {
+  @EnvironmentObject var store: Store
+  let sc: Sched, d: Date, t: Date
+  var body: some View {
+    let today = day0(t), m = nowMin(t)
+    let list = sc.lessonsFor(d), its = sc.itemsFor(d)
+    let cmp = d < today ? -1 : d > today ? 1 : 0
+    VStack(spacing: 10) {
+      if list.isEmpty && its.isEmpty {
+        VStack(spacing: 4) {
+          Text(sc.inSession(d) ? "Экзаменов нет" : "Пар нет").font(.d(18, 500)).foregroundColor(C.fg)
+          Text(DAYS_FULL[weekday(d)] + ", \(dnum(d)) " + MONF[mnum(d)]).font(.b(15)).foregroundColor(C.muted)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 40).padding(.horizontal, 12).card(16)
+      } else {
+        ForEach(Array(list.enumerated()), id: \.element.id) { i, l in
+          if i > 0 {
+            let p = list[i - 1]
+            GapView(kind: l.p - p.p > 1 ? .window : sc.isBig(p, l) ? .big : .small, gs: p.b, ge: l.a, m: m, cmp: cmp)
+          }
+          LessonCard(l: l, d: d, cmp: cmp, m: m)
+        }
+        ForEach(its) { it in ItemCard(l: it, d: d, cmp: cmp) }
+      }
+    }
+    .padding(.bottom, 24)
+  }
+}
