@@ -19,6 +19,10 @@ shoot() { # устройство, префикс, экраны...
   xcrun simctl bootstatus "$U" -b >/dev/null
   xcrun simctl status_bar "$U" override --time "${NOW#* }" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
   xcrun simctl install "$U" "$APP"
+  # Проверка: видит ли система виджет приложения
+  { echo "== $P pluginkit"; xcrun simctl spawn "$U" pluginkit -m -A -D -v -p com.apple.widgetkit-extension 2>&1 | grep -i -A2 pary || echo "не найден"
+    echo "== appex"; ls -la "$APP/PlugIns/ParyWidget.appex"; codesign -d --entitlements - "$APP/PlugIns/ParyWidget.appex" 2>&1 | tail -5
+    echo "== otool"; otool -l "$APP/PlugIns/ParyWidget.appex/ParyWidget" | grep -A3 LC_MAIN; nm "$APP/PlugIns/ParyWidget.appex/ParyWidget" | grep -i "_main\|NSExtensionMain" | head; } >> build/shots/diag.txt 2>&1
   for S in "$@"; do
     local SC=${S%%:*} TH=${S#*:}
     xcrun simctl ui "$U" appearance $([ "$TH" = light ] && echo light || echo dark)
