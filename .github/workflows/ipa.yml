@@ -1,0 +1,38 @@
+name: IPA
+on:
+  workflow_dispatch:
+  push:
+    paths: ["ios/**", ".github/workflows/ipa.yml"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        working-directory: ios
+        run: |
+          set -e
+          APP=Payload/Pary.app
+          mkdir -p $APP
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          if ! xcrun --sdk iphoneos swiftc -O -sdk "$SDK" -target arm64-apple-ios15.0 main.swift -o $APP/Pary > build.log 2>&1; then grep -E "error" build.log | head -25 | while IFS= read -r l; do echo "::error::$l"; done; exit 1; fi
+          cp Info.plist $APP/Info.plist
+          plutil -replace CFBundleVersion -string "${{ github.run_number }}" $APP/Info.plist
+          plutil -replace DTSDKName -string "iphoneos" $APP/Info.plist
+          I=../icon.png
+          sips -z 120 120 $I --out $APP/AppIcon60x60@2x.png >/dev/null
+          sips -z 180 180 $I --out $APP/AppIcon60x60@3x.png >/dev/null
+          sips -z 76 76 $I --out $APP/AppIcon76x76~ipad.png >/dev/null
+          sips -z 152 152 $I --out $APP/AppIcon76x76@2x~ipad.png >/dev/null
+          sips -z 167 167 $I --out $APP/AppIcon83.5x83.5@2x~ipad.png >/dev/null
+          printf 'APPL????' > $APP/PkgInfo
+          zip -qr ../pary-e21.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with: { name: pary-e21-ipa, path: pary-e21.ipa }
+      - name: Release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release delete ipa --yes --cleanup-tag || true
+          gh release create ipa pary-e21.ipa --title "Пары Е-21 для iPad" --notes "Сборка ${{ github.run_number }}. Без подписи: ставить через Sideloadly или AltStore."
