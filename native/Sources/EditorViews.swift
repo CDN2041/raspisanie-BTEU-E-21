@@ -107,6 +107,8 @@ struct EditorMain: View {
   @State private var forever: Int? = nil
   @State private var askClose = false
   @State private var pickDate = false
+  @State private var pageX: CGFloat = 0
+  @State private var pageOn: Double = 1
 
   var body: some View {
     VStack(spacing: 0) {
@@ -218,36 +220,34 @@ struct EditorMain: View {
     .padding(14).card(20)
   }
 
-  // Все учебные дни подряд (без воскресений): по ним листается неделя
-  var days: [Date] {
-    let from = ed.start ?? addDays(mondayOf(ed.date), -7 * 26)
-    let to = max(ed.end ?? addDays(ed.date, 7 * 26), ed.date)
-    var r: [Date] = [], x = day0(min(from, ed.date)), n = 0
-    while x <= to && n < 800 { if weekday(x) != 0 { r.append(x) }; x = addDays(x, 1); n += 1 }
-    return r
-  }
+  // Одна обычная прокрутка: карточка с датой стоит на месте, листаются только пары.
+  // Листание пальцем ловит системный жест, который включается только при движении вбок и не мешает прокрутке
   var pager: some View {
-    TabView(selection: Binding(get: { ed.date }, set: { v in Haptic.pick(); ed.date = v })) {
-      ForEach(days, id: \.self) { d in
-        ScrollView {
-          dayPage(d)
-            .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 110)
-            .frame(maxWidth: 560).frame(maxWidth: .infinity)
-        }
-        .scrollIndicators(.hidden)
-        .tag(d)
-      }
+    ScrollView {
+      dayPage(ed.date)
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 110)
+        .frame(maxWidth: 560).frame(maxWidth: .infinity)
     }
-    .tabViewStyle(.page(indexDisplayMode: .never))
+    .scrollIndicators(.hidden)
+    .scrollDisabled(pageX != 0) // пока листаешь вбок, страница не ездит вверх-вниз
   }
 
   @ViewBuilder func dayPage(_ d: Date) -> some View {
     let k = key(d), wt = ed.weekType(d), by = ed.baseFor(d)
     VStack(alignment: .leading, spacing: 12) {
       dateCard(d)
-      ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
-        slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
+      VStack(spacing: 12) {
+        ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
+          slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
+        }
       }
+      .offset(x: pageX)
+      .opacity(pageOn)
+      .sidePan(changed: { pageX = $0 }, ended: { t, v in
+        let dx = t + v * 0.15
+        if abs(dx) > 90, let to = neighbor(dx < 0 ? 1 : -1) { flip(to: to, from: t) }
+        else { withAnimation(.spring(response: 0.42, dampingFraction: 0.8)) { pageX = 0 } }
+      })
       Btn(title: "Новая пара", kind: .primary) {
         form = FormRef(i: nil, l: { var l = ELesson(); l.d = wd(d); l.p = firstFree(wd(d)); l.t = "lec"; return l }())
       }
@@ -264,14 +264,21 @@ struct EditorMain: View {
     if let e = ed.end, x > e { return nil }
     return x
   }
-  // Перелистывание на нужный день: системное листание само уводит старый день и приводит новый
-  func flip(to d0: Date) {
+  // Перелистывание: старые пары уезжают в одну сторону, новые приезжают с другой
+  func flip(to d0: Date, from start: CGFloat = 0) {
     var to = day0(d0)
     if weekday(to) == 0 { to = addDays(to, 1) }
     if let s = ed.start, to < s { to = s }
-    guard to != ed.date else { return }
+    guard to != ed.date else { withAnimation(.spring(response: 0.42, dampingFraction: 0.8)) { pageX = 0 }; return }
+    let n: CGFloat = to > ed.date ? 1 : -1, W: CGFloat = 420
     Haptic.pick()
-    withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) { ed.date = to }
+    pageX = start
+    withAnimation(.easeIn(duration: 0.15)) { pageX = -n * W; pageOn = 0.3 }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+      ed.date = to
+      pageX = n * W
+      withAnimation(.spring(response: 0.46, dampingFraction: 0.86)) { pageX = 0; pageOn = 1 }
+    }
   }
   func firstFree(_ w: Int) -> Int {
     for p in 1...max(1, ed.bells.count) where !ed.lessons.contains(where: { $0.d == w && $0.p == p }) { return p }
