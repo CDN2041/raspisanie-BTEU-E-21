@@ -6,6 +6,7 @@ struct FullView: View {
   @EnvironmentObject var store: Store
   @EnvironmentObject var nav: Nav
   @Namespace private var ns
+  @State private var stripW: CGFloat = 1
 
   var body: some View {
     Group {
@@ -104,36 +105,46 @@ struct FullView: View {
     return mnum(mon) == mnum(e) ? "\(dnum(mon))-\(dnum(e)) " + MONF[mnum(mon)] : "\(dnum(mon)) " + MON[mnum(mon)] + " - \(dnum(e)) " + MON[mnum(e)]
   }
 
+  // Дни недели, как в редакторе: стеклянная полоса, выбранный день залит.
+  // Можно зажать и вести пальцем: день меняется под пальцем
   func strip(_ sc: Sched, _ t: Date) -> some View {
     let mon = mondayOf(nav.sel), nd = shownDays(sc, mon), today = day0(t)
-    return HStack(spacing: 6) {
+    return HStack(spacing: 2) {
       ForEach(0..<nd, id: \.self) { i in
         let d = addDays(mon, i)
         let c = sc.active(sc.lessonsFor(d)).count, its = sc.itemsFor(d)
         let lbl = c > 0 ? "\(c) п." : !its.isEmpty ? (KSHORT[its[0].kind ?? "other"] ?? "") : "·"
         let isSel = d == nav.sel, isToday = d == today, hn = store.dayHasNote(d), off = sc.beforeStart(d)
+        let base: Color = hn ? C.note : C.fg
         Button {
           guard !off else { return }
-          withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { nav.sel = d }
+          withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { nav.sel = d }
         } label: {
-          VStack(spacing: 2) {
-            Text(DSHORT[i].uppercased()).font(.b(12, 600)).tracking(0.5).foregroundColor(hn ? C.note : (isToday ? C.fg : C.muted))
-            Text("\(dnum(d))").font(.m(17, 700)).monospacedDigit().foregroundColor(hn ? C.note : (isSel || isToday ? C.fg : C.fg.opacity(0.75)))
-            Text(lbl).font(.b(11)).monospacedDigit().foregroundColor(hn ? C.note : C.muted)
+          VStack(spacing: 1) {
+            Text(DSHORT[i]).font(.b(12, 600)).foregroundColor(isSel ? C.bg.opacity(0.75) : (hn ? C.note : (isToday ? C.fg : C.muted)))
+            Text("\(dnum(d))").font(.m(17, 700)).monospacedDigit().foregroundColor(isSel ? C.bg : (hn ? C.note : C.fg.opacity(isToday ? 1 : 0.8)))
+              .underline(isToday && !isSel, color: base)
+            Text(lbl).font(.b(11)).monospacedDigit().foregroundColor(isSel ? C.bg.opacity(0.75) : (hn ? C.note : C.muted))
           }
-          .frame(maxWidth: .infinity).padding(.top, 8).padding(.bottom, 7)
-          .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(hn ? C.noteSoft : .clear))
-          .overlay {
-            if isSel {
-              RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(hn ? C.note : C.fg, lineWidth: 1.5)
-                .matchedGeometryEffect(id: "sel", in: ns)
-            }
+          .frame(maxWidth: .infinity).padding(.vertical, 7)
+          .background {
+            if isSel { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(base).matchedGeometryEffect(id: "sel", in: ns) }
+            else if hn { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(C.noteSoft) }
           }
         }
         .buttonStyle(Press(scale: 0.93))
         .opacity(off ? 0.25 : 1)
       }
     }
+    .padding(3)
+    .glass(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    .background(GeometryReader { g in Color.clear.onAppear { stripW = g.size.width }.onChange(of: g.size.width) { stripW = $0 } })
+    .gesture(DragGesture(minimumDistance: 6).onChanged { v in
+      let i = max(0, min(nd - 1, Int(v.location.x / max(1, stripW / CGFloat(nd)))))
+      let d = addDays(mon, i)
+      guard d != nav.sel, !sc.beforeStart(d) else { return }
+      withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { nav.sel = d }
+    })
   }
 
   // ---------- Дни ----------
