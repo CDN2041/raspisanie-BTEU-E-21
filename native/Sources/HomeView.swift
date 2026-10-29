@@ -45,8 +45,9 @@ struct HomeView: View {
         }
         Spacer()
         Button { Haptic.tap(); nav.settings = true } label: {
-          Image(systemName: "gearshape").font(.system(size: 19, weight: .regular)).foregroundColor(C.muted).frame(width: 40, height: 40)
-        }.buttonStyle(Press(scale: 0.85))
+          Image(systemName: "gearshape").font(.system(size: 19, weight: .medium)).foregroundColor(C.fg).frame(width: 44, height: 44)
+            .glass(Circle())
+        }.buttonStyle(Press(scale: 0.92))
       }
       .rise(0, first)
 
@@ -103,9 +104,10 @@ struct HomeView: View {
           Image(systemName: "calendar").font(.system(size: 17))
           Text("Всё расписание").font(.b(15, 600))
         }
-        .foregroundColor(C.fg).frame(maxWidth: .infinity).padding(14).card(14)
+        .foregroundColor(C.fg).frame(maxWidth: .infinity).padding(15)
+        .glass(RoundedRectangle(cornerRadius: 18, style: .continuous))
       }
-      .buttonStyle(Press())
+      .buttonStyle(Press(scale: 0.98))
       .rise(9, first)
 
       VersionFooter()

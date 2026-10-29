@@ -53,8 +53,8 @@ struct FullView: View {
       Spacer()
       Button { Haptic.tap(); nav.calendar = true } label: {
         Image(systemName: "calendar").font(.system(size: 24)).foregroundColor(C.fg)
-          .frame(width: 64, height: 52).card(14)
-      }.buttonStyle(Press(scale: 0.92))
+          .frame(width: 64, height: 52).glass(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      }.buttonStyle(Press(scale: 0.95))
     }
   }
 
@@ -63,19 +63,19 @@ struct FullView: View {
     let prevOff = sc.beforeStart(addDays(mon, -1)), nextOff = sc.afterEnd(addDays(mon, 7))
     return HStack(spacing: 4) {
       Button { go(sc, addDays(mon, -7)) } label: {
-        Image(systemName: "chevron.left").font(.system(size: 18, weight: .semibold)).frame(width: 36, height: 36)
-      }.buttonStyle(Press(scale: 0.85)).foregroundColor(C.muted).opacity(prevOff ? 0.25 : 1).disabled(prevOff)
+        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40).glass(Circle())
+      }.buttonStyle(Press(scale: 0.92)).foregroundColor(C.fg).opacity(prevOff ? 0.25 : 1).disabled(prevOff)
       Text(range(mon, nd)).font(.b(15, 600)).monospacedDigit().foregroundColor(C.fg).frame(maxWidth: .infinity)
         .id(key(mon)).transition(.opacity)
       Button { go(sc, addDays(mon, 7)) } label: {
-        Image(systemName: "chevron.right").font(.system(size: 18, weight: .semibold)).frame(width: 36, height: 36)
-      }.buttonStyle(Press(scale: 0.85)).foregroundColor(C.muted).opacity(nextOff ? 0.25 : 1).disabled(nextOff)
+        Image(systemName: "chevron.right").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40).glass(Circle())
+      }.buttonStyle(Press(scale: 0.92)).foregroundColor(C.fg).opacity(nextOff ? 0.25 : 1).disabled(nextOff)
       Button {
         Haptic.tap()
         withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) { nav.sel = sc.clamp(sc.studyDay(store.now)) }
       } label: {
-        Text("Сегодня").font(.b(15, 600)).foregroundColor(C.fg).padding(.horizontal, 12).frame(height: 36).card(10)
-      }.buttonStyle(Press())
+        Text("Сегодня").font(.b(15, 600)).foregroundColor(C.fg).padding(.horizontal, 16).frame(height: 40).glass(Capsule())
+      }.buttonStyle(Press(scale: 0.95))
     }
   }
   // Листаем на первый день недели

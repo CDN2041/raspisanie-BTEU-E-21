@@ -231,6 +231,17 @@ struct Rise: ViewModifier {
       }
   }
 }
+// Liquid Glass на iOS 26, на старых системах обычная карточка
+extension View {
+  @ViewBuilder func glass<S: Shape>(_ s: S, tint: Color? = nil) -> some View {
+    if #available(iOS 26.0, *) {
+      self.glassEffect(Glass.regular.tint(tint).interactive(), in: s)
+    } else {
+      self.background(s.fill(tint ?? C.surface)).overlay(s.stroke(tint == nil ? C.line : .clear, lineWidth: 1))
+    }
+  }
+}
+
 extension View {
   func rise(_ i: Int, _ on: Bool = true) -> some View { modifier(Rise(i: i, on: on)) }
   func card(_ r: CGFloat = 16, border: Color = C.line, width: CGFloat = 1) -> some View {

@@ -290,10 +290,9 @@ struct Btn: View {
     Button { Haptic.tap(); action() } label: {
       Text(title).font(.b(15, 600))
         .foregroundColor(kind == .primary ? C.bg : kind == .del ? C.warn : kind == .danger ? C.bg : C.fg)
-        .frame(maxWidth: kind == .del ? nil : .infinity).padding(.vertical, 12).padding(.horizontal, 14)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(kind == .primary ? C.fg : kind == .danger ? C.warn : kind == .del ? Color.clear : C.bg))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(kind == .ghost || kind == .del ? C.line : .clear, lineWidth: 1))
-    }.buttonStyle(Press())
+        .frame(maxWidth: kind == .del ? nil : .infinity).padding(.vertical, 14).padding(.horizontal, 16)
+        .glass(Capsule(), tint: kind == .primary ? C.fg : kind == .danger ? C.warn : nil)
+    }.buttonStyle(Press(scale: 0.96))
   }
 }
 

@@ -5,7 +5,9 @@ extension View {
   // Системная шторка в цветах сайта
   @ViewBuilder func sheetLook(_ detents: Set<PresentationDetent>) -> some View {
     let v = self.presentationDetents(detents).presentationDragIndicator(.visible)
-    if #available(iOS 16.4, *) {
+    if #available(iOS 26.0, *) {
+      v // системная шторка из Liquid Glass
+    } else if #available(iOS 16.4, *) {
       v.presentationBackground(C.surface).presentationCornerRadius(28)
     } else {
       v.background(C.surface.ignoresSafeArea())
@@ -158,8 +160,8 @@ struct CalendarSheet: View {
   }
   func navBtn(_ icon: String, off: Bool, _ a: @escaping () -> Void) -> some View {
     Button(action: a) {
-      Image(systemName: icon).font(.system(size: 17, weight: .semibold)).frame(width: 36, height: 36)
-    }.buttonStyle(Press(scale: 0.85)).foregroundColor(C.muted).opacity(off ? 0.25 : 1).disabled(off)
+      Image(systemName: icon).font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40).glass(Circle())
+    }.buttonStyle(Press(scale: 0.92)).foregroundColor(C.fg).opacity(off ? 0.25 : 1).disabled(off)
   }
 
   func grid(_ sc: Sched) -> some View {
