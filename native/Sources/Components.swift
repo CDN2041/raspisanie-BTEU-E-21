@@ -288,10 +288,11 @@ struct Btn: View {
   let action: () -> Void
   var body: some View {
     Button { Haptic.tap(); action() } label: {
-      Text(title).font(.b(15, 600))
+      Text(title).font(.b(15, 600)).lineLimit(1).minimumScaleFactor(0.85)
         .foregroundColor(kind == .primary ? C.bg : kind == .del ? C.warn : kind == .danger ? C.bg : C.fg)
-        .frame(maxWidth: kind == .del ? nil : .infinity).padding(.vertical, 14).padding(.horizontal, 16)
-        .glass(Capsule(), tint: kind == .primary ? C.fg : kind == .danger ? C.warn : nil)
+        .frame(maxWidth: kind == .del ? nil : .infinity).padding(.vertical, 14).padding(.horizontal, 12)
+        // В шторке из стекла простая стеклянная кнопка теряется, поэтому лёгкий оттенок
+        .glass(Capsule(), tint: kind == .primary ? C.fg : kind == .danger ? C.warn : C.fg.opacity(0.1))
     }.buttonStyle(Press(scale: 0.96))
   }
 }
