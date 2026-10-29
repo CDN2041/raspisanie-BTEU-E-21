@@ -121,7 +121,6 @@ struct EditorMain: View {
         if ed.altOpen { altBanner }
         Seg(items: ed.altOpen ? [("week", "Неделя")] : [("week", "Неделя"), ("sess", "Сессия"), ("gen", "Общее")],
             value: Binding(get: { tab }, set: { v in withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) { tab = v } }))
-        if tab == "week" { dateCard }
       }
       .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 12)
       .frame(maxWidth: 560).frame(maxWidth: .infinity)
@@ -189,8 +188,9 @@ struct EditorMain: View {
   }
 
   // ---------- Неделя ----------
-  var dateCard: some View {
-    let d = ed.date, k = key(d), wt = ed.weekType(d), mon = mondayOf(d)
+  // Карточка с датой и днями: часть страницы дня, уезжает вверх вместе с парами
+  func dateCard(_ d: Date) -> some View {
+    let k = key(d), wt = ed.weekType(d), mon = mondayOf(d)
     return VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
         navBtn("chevron.left") { go(addDays(mon, -7)) }
@@ -244,6 +244,7 @@ struct EditorMain: View {
   @ViewBuilder func dayPage(_ d: Date) -> some View {
     let k = key(d), wt = ed.weekType(d), by = ed.baseFor(d)
     VStack(alignment: .leading, spacing: 12) {
+      dateCard(d)
       ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
         slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
       }
