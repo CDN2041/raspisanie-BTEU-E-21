@@ -106,14 +106,11 @@ struct EditorMain: View {
   @State private var form: FormRef? = nil
   @State private var forever: Int? = nil
   @State private var askClose = false
-  @State private var pageX: CGFloat = 0     // листание дней: карточки едут за пальцем
-  @State private var pageOn: Double = 1
-  @State private var lock = 0               // 1 жест по горизонтали, 2 по вертикали
   @State private var pickDate = false
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
+    VStack(spacing: 0) {
+      VStack(alignment: .leading, spacing: 12) {
         HStack(spacing: 10) {
           CloseBtn { if ed.dirty { askClose = true } else { close() } }
           Spacer()
@@ -124,19 +121,24 @@ struct EditorMain: View {
         if ed.altOpen { altBanner }
         Seg(items: ed.altOpen ? [("week", "Неделя")] : [("week", "Неделя"), ("sess", "Сессия"), ("gen", "Общее")],
             value: Binding(get: { tab }, set: { v in withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) { tab = v } }))
-        Group {
-          switch tab {
-          case "sess": SessionTab(ed: ed)
-          case "gen": GeneralTab(ed: ed, openAlt: { tab = "week" })
-          default: week
-          }
-        }
-        .transition(.opacity.combined(with: .offset(y: 8)))
+        if tab == "week" { dateCard }
       }
-      .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 110)
+      .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 12)
       .frame(maxWidth: 560).frame(maxWidth: .infinity)
+      // Дни листаются системным листанием, как в расписании; прокрутка внутри дня обычная
+      Group {
+        if tab == "week" { pager }
+        else {
+          ScrollView {
+            Group { if tab == "sess" { SessionTab(ed: ed) } else { GeneralTab(ed: ed, openAlt: { tab = "week" }) } }
+              .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 110)
+              .frame(maxWidth: 560).frame(maxWidth: .infinity)
+          }
+          .scrollIndicators(.hidden)
+        }
+      }
+      .transition(.opacity)
     }
-    .scrollIndicators(.hidden)
     .safeAreaInset(edge: .bottom) { if ed.dirty { saveBar } }
     .animation(.spring(response: 0.45, dampingFraction: 0.86), value: ed.dirty)
     .sheet(item: $pick) { m in PickSheet(ed: ed, mode: m).preferredColorScheme(store.colorScheme) }
@@ -187,9 +189,9 @@ struct EditorMain: View {
   }
 
   // ---------- Неделя ----------
-  @ViewBuilder var week: some View {
-    let d = ed.date, k = key(d), wt = ed.weekType(d), mon = mondayOf(d), by = ed.baseFor(d)
-    VStack(alignment: .leading, spacing: 12) {
+  var dateCard: some View {
+    let d = ed.date, k = key(d), wt = ed.weekType(d), mon = mondayOf(d)
+    return VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
         navBtn("chevron.left") { go(addDays(mon, -7)) }
         Spacer()
@@ -214,35 +216,44 @@ struct EditorMain: View {
       .padding(3).glass(Capsule())
     }
     .padding(14).card(20)
+  }
 
-    // Пары листаются пальцем, как в расписании: тянешь, они едут, отпустил, и открылся соседний день
-    VStack(spacing: 10) {
+  // Все учебные дни подряд (без воскресений): по ним листается неделя
+  var days: [Date] {
+    let from = ed.start ?? addDays(mondayOf(ed.date), -7 * 26)
+    let to = max(ed.end ?? addDays(ed.date, 7 * 26), ed.date)
+    var r: [Date] = [], x = day0(min(from, ed.date)), n = 0
+    while x <= to && n < 800 { if weekday(x) != 0 { r.append(x) }; x = addDays(x, 1); n += 1 }
+    return r
+  }
+  var pager: some View {
+    TabView(selection: Binding(get: { ed.date }, set: { v in Haptic.pick(); ed.date = v })) {
+      ForEach(days, id: \.self) { d in
+        ScrollView {
+          dayPage(d)
+            .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 110)
+            .frame(maxWidth: 560).frame(maxWidth: .infinity)
+        }
+        .scrollIndicators(.hidden)
+        .tag(d)
+      }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+  }
+
+  @ViewBuilder func dayPage(_ d: Date) -> some View {
+    let k = key(d), wt = ed.weekType(d), by = ed.baseFor(d)
+    VStack(alignment: .leading, spacing: 12) {
       ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
         slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
       }
-    }
-    .offset(x: pageX)
-    .opacity(pageOn)
-    .simultaneousGesture(DragGesture(minimumDistance: 12)
-      .onChanged { v in
-        let dx = v.translation.width, dy = v.translation.height
-        if lock == 0 { lock = abs(dx) > abs(dy) * 1.3 ? 1 : 2 }
-        if lock == 1 { pageX = dx }
+      Btn(title: "Новая пара", kind: .primary) {
+        form = FormRef(i: nil, l: { var l = ELesson(); l.d = wd(d); l.p = firstFree(wd(d)); l.t = "lec"; return l }())
       }
-      .onEnded { v in
-        defer { lock = 0 }
-        guard lock == 1 else { return }
-        let dx = v.translation.width + (v.predictedEndTranslation.width - v.translation.width) * 0.25
-        if abs(dx) > 80, let to = neighbor(dx < 0 ? 1 : -1) { flip(to: to, from: v.translation.width) }
-        else { withAnimation(.spring(response: 0.42, dampingFraction: 0.8)) { pageX = 0 } }
-      })
-
-    Btn(title: "Новая пара", kind: .primary) {
-      form = FormRef(i: nil, l: { var l = ELesson(); l.d = wd(d); l.p = firstFree(wd(d)); l.t = "lec"; return l }())
+      Text("Нажмите на карточку, чтобы изменить пару в постоянном расписании. Кнопки под карточкой меняют только выбранный день.")
+        .font(.b(13)).foregroundColor(C.muted)
+      changesList
     }
-    Text("Нажмите на карточку, чтобы изменить пару в постоянном расписании. Кнопки под карточкой меняют только выбранный день.")
-      .font(.b(13)).foregroundColor(C.muted)
-    changesList
   }
 
   func neighbor(_ n: Int) -> Date? {
@@ -252,21 +263,14 @@ struct EditorMain: View {
     if let e = ed.end, x > e { return nil }
     return x
   }
-  // Перелистывание: старые карточки уезжают в одну сторону, новые приезжают с другой
-  func flip(to d0: Date, from start: CGFloat = 0) {
+  // Перелистывание на нужный день: системное листание само уводит старый день и приводит новый
+  func flip(to d0: Date) {
     var to = day0(d0)
     if weekday(to) == 0 { to = addDays(to, 1) }
     if let s = ed.start, to < s { to = s }
-    guard to != ed.date else { withAnimation(.spring(response: 0.42, dampingFraction: 0.8)) { pageX = 0 }; return }
-    let n: CGFloat = to > ed.date ? 1 : -1, W: CGFloat = 380
+    guard to != ed.date else { return }
     Haptic.pick()
-    pageX = start
-    withAnimation(.easeIn(duration: 0.14)) { pageX = -n * W; pageOn = 0.2 }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
-      ed.date = to
-      pageX = n * W
-      withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { pageX = 0; pageOn = 1 }
-    }
+    withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) { ed.date = to }
   }
   func firstFree(_ w: Int) -> Int {
     for p in 1...max(1, ed.bells.count) where !ed.lessons.contains(where: { $0.d == w && $0.p == p }) { return p }
