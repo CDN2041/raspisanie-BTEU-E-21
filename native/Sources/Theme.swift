@@ -222,6 +222,14 @@ extension View {
 }
 
 extension View {
+  // Прозрачное стекло: почти не закрывает то, что под ним
+  @ViewBuilder func clearGlass<S: Shape>(_ s: S) -> some View {
+    if #available(iOS 26.0, *) {
+      self.glassEffect(Glass.clear.interactive(), in: s)
+    } else {
+      self.background(s.fill(C.fg.opacity(0.06))).overlay(s.stroke(C.fg.opacity(0.25), lineWidth: 1))
+    }
+  }
   func rise(_ i: Int, _ on: Bool = true) -> some View { modifier(Rise(i: i, on: on)) }
   func card(_ r: CGFloat = 16, border: Color = C.line, width: CGFloat = 1) -> some View {
     self.background(RoundedRectangle(cornerRadius: r, style: .continuous).fill(C.surface))

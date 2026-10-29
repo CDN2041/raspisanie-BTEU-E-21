@@ -26,8 +26,9 @@ struct Lens<Item: View>: View {
       // Выделение: в покое залито, под пальцем стеклянная линза чуть больше ячейки
       Group {
         if held {
-          RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill(shown).opacity(0.14))
-            .glass(RoundedRectangle(cornerRadius: radius, style: .continuous))
+          // Прозрачная линза: под ней видно день и число пар, как в панели вкладок Apple Music
+          RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.clear)
+            .clearGlass(RoundedRectangle(cornerRadius: radius, style: .continuous))
         } else {
           RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill(shown))
         }
