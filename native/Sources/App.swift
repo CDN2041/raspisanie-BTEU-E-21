@@ -13,7 +13,6 @@ final class Nav: ObservableObject {
   @Published var editor = false
   @Published var note: NoteRef? = nil
   @Published var sel: Date = day0(Shot.now ?? Date())
-  @Published var dir = 1 // куда листали дни: для анимации
 
   func openNote(_ d: Date, _ l: Lesson) {
     Haptic.tap()
@@ -41,7 +40,8 @@ struct RootView: View {
   var body: some View {
     NavigationStack(path: $nav.path) {
       Group {
-        if store.sched == nil { MessageView() }
+        if Shot.screen == "widgets" { WidgetGallery() }
+        else if store.sched == nil { MessageView() }
         else if store.ui == "old" { FullView(root: true) }
         else { HomeView() }
       }
@@ -66,6 +66,7 @@ struct RootView: View {
       store.migrate()
       await store.fetch(force: true)
     }
+    .onOpenURL { _ in nav.path = []; nav.note = nil; nav.settings = false; nav.calendar = false }
     .onChange(of: phase) { p in
       if p == .active { Task { await store.fetch() } }
     }

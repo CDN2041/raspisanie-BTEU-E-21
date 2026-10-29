@@ -1,0 +1,51 @@
+{
+  "groups": [
+    {
+      "layers": [
+        {
+          "glass": true,
+          "image-name": "cap.svg",
+          "name": "cap",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.07843,0.09412,0.12941,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.4
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  },
+  "fill-specializations": [
+    {
+      "value": {
+        "automatic-gradient": "gray:0.90000,1.00000"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "automatic-gradient": "gray:0.16000,1.00000"
+      }
+    }
+  ]
+}

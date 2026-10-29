@@ -58,27 +58,6 @@ extension Font {
   static func m(_ s: CGFloat, _ w: CGFloat = 500) -> Font { Font(Fonts.ui("JetBrainsMono", s, w) as CTFont) } // цифры
 }
 
-// ---------- Отклик ----------
-enum Haptic {
-  static func tap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-  static func soft() { UIImpactFeedbackGenerator(style: .soft).impactOccurred() }
-  static func pick() { UISelectionFeedbackGenerator().selectionChanged() }
-  static func ok() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-  static func warn() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
-}
-
-// Нажатие: лёгкое сжатие на пружине, как у системных кнопок
-struct Press: ButtonStyle {
-  var scale: CGFloat = 0.97
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .contentShape(Rectangle())
-      .scaleEffect(configuration.isPressed ? scale : 1)
-      .opacity(configuration.isPressed ? 0.85 : 1)
-      .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
-  }
-}
-
 // ---------- Мелкие элементы ----------
 struct Eyebrow: View {
   let text: String

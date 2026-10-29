@@ -17,6 +17,8 @@
   <key>LSRequiresIPhoneOS</key><true/>
   <key>UIDeviceFamily</key><array><integer>1</integer><integer>2</integer></array>
   <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><true/></dict>
+  <key>CFBundleURLTypes</key>
+  <array><dict><key>CFBundleURLSchemes</key><array><string>pary</string></array></dict></array>
   <key>UILaunchScreen</key><dict><key>UIColorName</key><string>LaunchBG</string></dict>
   <key>UISupportedInterfaceOrientations</key>
   <array><string>UIInterfaceOrientationPortrait</string></array>

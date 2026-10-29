@@ -28,11 +28,17 @@ shoot() { # устройство, префикс, экраны...
     xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH.png" >/dev/null 2>&1
     echo "shot $P-$SC-$TH"
   done
+  # Экран «Домой»: иконка в светлой и тёмной теме
+  xcrun simctl terminate "$U" by.cdn2041.pary || true
+  for TH in light dark; do
+    xcrun simctl ui "$U" appearance $TH; sleep 3
+    xcrun simctl io "$U" screenshot "build/shots/$P-springboard-$TH.png" >/dev/null 2>&1
+  done
   xcrun simctl shutdown "$U" || true
 }
 PH=$(pick "iPhone" "Max"); PH=${PH:-$(pick "iPhone" "")}
 PAD=$(pick "iPad Pro 11" ""); PAD=${PAD:-$(pick "iPad" "mini")}
 echo "iPhone $PH, iPad $PAD"
-shoot "$PH" phone home:dark full:dark cal:dark note:dark settings:dark home:light full:light
-[ -n "$PAD" ] && shoot "$PAD" ipad home:dark full:dark
+shoot "$PH" phone widgets:dark widgets:light home:dark full:dark note:dark home:light
+[ -n "$PAD" ] && shoot "$PAD" ipad home:dark
 ls build/shots

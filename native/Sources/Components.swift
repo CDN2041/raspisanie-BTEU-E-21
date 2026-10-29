@@ -1,5 +1,27 @@
 import SwiftUI
 
+// ---------- Отклик ----------
+enum Haptic {
+  static func tap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+  static func soft() { UIImpactFeedbackGenerator(style: .soft).impactOccurred() }
+  static func pick() { UISelectionFeedbackGenerator().selectionChanged() }
+  static func ok() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+  static func warn() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+}
+
+// Нажатие: лёгкое сжатие на пружине, как у системных кнопок
+struct Press: ButtonStyle {
+  var scale: CGFloat = 0.97
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .contentShape(Rectangle())
+      .scaleEffect(configuration.isPressed ? scale : 1)
+      .opacity(configuration.isPressed ? 0.85 : 1)
+      .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+  }
+}
+
+
 // Заголовок пары на экране «Сейчас»
 struct LessonHead: View {
   let l: Lesson
@@ -150,22 +172,14 @@ struct CardBody<Extra: View>: View {
           Text(n.components(separatedBy: "\n").first ?? n).font(.b(13)).lineLimit(1)
         }
         .foregroundColor(C.note).padding(.top, 8)
-        .overlay(alignment: .top) { Rectangle().fill(C.line).frame(height: 1).mask(DashMask()).padding(.top, -2) }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) { DashLine().offset(y: -5) }
         .padding(.top, 4)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
-struct DashMask: View {
-  var body: some View {
-    GeometryReader { g in
-      Path { p in p.move(to: .zero); p.addLine(to: CGPoint(x: g.size.width * 4, y: 0)) }
-        .stroke(style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
-    }
-  }
-}
-
 // Событие сессии в полном расписании
 struct ItemCard: View {
   @EnvironmentObject var store: Store
@@ -196,7 +210,6 @@ struct GapView: View {
   let kind: Kind, gs: Int, ge: Int, m: Int, cmp: Int
   var body: some View {
     let on = cmp == 0 && m >= gs && m < ge
-    let past = cmp < 0 || (cmp == 0 && m >= ge)
     let fill = cmp < 0 ? 1 : cmp > 0 ? 0 : max(0, min(1, Double(m - gs) / Double(max(1, ge - gs))))
     let col = on ? C.live : C.muted
     Group {
@@ -235,7 +248,6 @@ struct GapView: View {
         }.foregroundColor(col).padding(.vertical, 2)
       }
     }
-    .opacity(past && !on ? 1 : 1)
   }
   func fillBar(_ f: Double, _ on: Bool, _ r: CGFloat) -> some View {
     GeometryReader { g in
