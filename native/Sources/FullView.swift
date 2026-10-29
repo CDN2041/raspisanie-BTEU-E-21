@@ -80,7 +80,8 @@ struct FullView: View {
       Button { go(sc, addDays(mon, -7)) } label: {
         Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40).glass(Circle())
       }.buttonStyle(Press(scale: 0.92)).foregroundColor(C.fg).opacity(prevOff ? 0.25 : 1).disabled(prevOff)
-      Text(range(mon, nd)).font(.b(15, 600)).monospacedDigit().foregroundColor(C.fg).frame(maxWidth: .infinity)
+      Text(range(mon, nd)).font(.b(15, 600)).monospacedDigit().foregroundColor(C.fg)
+        .lineLimit(1).minimumScaleFactor(0.8).frame(maxWidth: .infinity)
         .id(key(mon)).transition(.opacity)
       Button { go(sc, addDays(mon, 7)) } label: {
         Image(systemName: "chevron.right").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40).glass(Circle())

@@ -13,14 +13,15 @@ struct Lens<Item: View>: View {
   @ViewBuilder let item: (Int, Bool) -> Item // номер, выделен ли (при зажатии выделен тот, что под пальцем)
 
   @State private var finger: CGFloat? = nil
+  @State private var settled: Int? = nil // куда отпустили: линза остаётся там, пока выбор не дойдёт до родителя
   @State private var hover: Int? = nil
   @State private var w: CGFloat = 1
 
   var body: some View {
     let cw = w / CGFloat(max(1, count))
     let held = finger != nil
-    let shown = hover ?? index
-    let x = finger.map { min(max($0 - cw / 2, 0), w - cw) } ?? CGFloat(index) * cw
+    let shown = hover ?? settled ?? index
+    let x = finger.map { min(max($0 - cw / 2, 0), w - cw) } ?? CGFloat(settled ?? index) * cw
     ZStack(alignment: .leading) {
       // Выделение: в покое залито, под пальцем стеклянная линза чуть больше ячейки
       Group {
@@ -61,10 +62,12 @@ struct Lens<Item: View>: View {
         .onEnded { v in
           var i = max(0, min(count - 1, Int(v.location.x / max(1, cw))))
           if disabled(i) { i = index }
-          withAnimation(.spring(response: 0.42, dampingFraction: 0.72)) { finger = nil; hover = nil }
+          withAnimation(.spring(response: 0.42, dampingFraction: 0.72)) { finger = nil; hover = nil; settled = i }
           if i != index { onPick(i) }
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { settled = nil } // на случай, если выбор не приняли
         }
     )
     .animation(.spring(response: 0.42, dampingFraction: 0.8), value: index)
+    .onChange(of: index) { i in if settled == i { settled = nil } }
   }
 }

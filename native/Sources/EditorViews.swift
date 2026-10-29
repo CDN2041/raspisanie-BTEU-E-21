@@ -109,6 +109,7 @@ struct EditorMain: View {
   @State private var pageX: CGFloat = 0     // листание дней: карточки едут за пальцем
   @State private var pageOn: Double = 1
   @State private var lock = 0               // 1 жест по горизонтали, 2 по вертикали
+  @State private var pickDate = false
 
   var body: some View {
     ScrollView {
@@ -140,6 +141,14 @@ struct EditorMain: View {
     .animation(.spring(response: 0.45, dampingFraction: 0.86), value: ed.dirty)
     .sheet(item: $pick) { m in PickSheet(ed: ed, mode: m).preferredColorScheme(store.colorScheme) }
     .sheet(item: $form) { f in LessonForm(ed: ed, i: f.i, l: f.l).preferredColorScheme(store.colorScheme) }
+    .sheet(isPresented: $pickDate) {
+      DatePicker("", selection: Binding(get: { ed.date }, set: { v in pickDate = false; go(v) }), displayedComponents: .date)
+        .datePickerStyle(.graphical).labelsHidden().tint(C.fg)
+        .environment(\.locale, Locale(identifier: "ru_RU"))
+        .padding(.horizontal, 16).padding(.top, 20)
+        .presentationDetents([.medium]).presentationDragIndicator(.visible)
+        .preferredColorScheme(store.colorScheme)
+    }
     .confirmationDialog("Удалить пару из расписания навсегда?", isPresented: Binding(get: { forever != nil }, set: { if !$0 { forever = nil } }), titleVisibility: .visible) {
       Button("Удалить навсегда", role: .destructive) { if let i = forever { withAnimation { ed.deleteForever(i) } } }
       Button("Отмена", role: .cancel) {}
@@ -184,8 +193,12 @@ struct EditorMain: View {
       HStack(spacing: 8) {
         navBtn("chevron.left") { go(addDays(mon, -7)) }
         Spacer()
-        DatePicker("", selection: Binding(get: { ed.date }, set: { v in go(v, exact: true) }), displayedComponents: .date)
-          .labelsHidden().environment(\.locale, Locale(identifier: "ru_RU"))
+        Button { Haptic.tap(); pickDate = true } label: {
+          Text("\(dnum(d)) " + MONF[mnum(d)] + " \(ynum(d))").font(.b(16, 600)).monospacedDigit().foregroundColor(C.fg)
+            .lineLimit(1).fixedSize()
+            .padding(.horizontal, 16).frame(height: 44).glass(Capsule())
+            .id(k).transition(.opacity)
+        }.buttonStyle(Press(scale: 0.95))
         Spacer()
         navBtn("chevron.right") { go(addDays(mon, 7)) }
       }
