@@ -264,31 +264,18 @@ struct DashLine: View {
   }
 }
 
-// Сегментированный переключатель как на сайте
+// Сегментированный переключатель: зажать и вести, как панель вкладок iOS 26
 struct Seg: View {
   let items: [(String, String)]
   @Binding var value: String
-  @Namespace private var ns
   var body: some View {
-    HStack(spacing: 4) {
-      ForEach(items, id: \.0) { it in
-        Button {
-          guard value != it.0 else { return }
-          Haptic.pick()
-          withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) { value = it.0 }
-        } label: {
-          Text(it.1).font(.b(14, value == it.0 ? 600 : 500)).foregroundColor(value == it.0 ? C.bg : C.muted)
-            .lineLimit(1).minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity).padding(.vertical, 10).padding(.horizontal, 4)
-            .background {
-              if value == it.0 { RoundedRectangle(cornerRadius: 9, style: .continuous).fill(C.fg).matchedGeometryEffect(id: "k", in: ns) }
-            }
-        }.buttonStyle(Press(scale: 0.96))
-      }
+    let idx = items.firstIndex { $0.0 == value } ?? 0
+    Lens(count: items.count, index: idx, height: 40, radius: 20, onPick: { i in Haptic.pick(); value = items[i].0 }) { i, sel in
+      Text(items[i].1).font(.b(14, sel ? 600 : 500)).foregroundColor(sel ? C.bg : C.muted)
+        .lineLimit(1).minimumScaleFactor(0.75).padding(.horizontal, 4)
     }
     .padding(3)
-    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(C.bg))
-    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(C.line, lineWidth: 1))
+    .glass(Capsule())
   }
 }
 

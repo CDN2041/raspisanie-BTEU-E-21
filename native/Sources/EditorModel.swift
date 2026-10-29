@@ -155,14 +155,16 @@ final class Editor: ObservableObject {
   enum Phase: Equatable { case checking, login(String?), ready, failed(String) }
   @Published var phase: Phase = .checking
   @Published var login = ""
-  @Published private(set) var lessons: [ELesson] = []
-  @Published private(set) var changes: [String: [EChange]] = [:]
+  @Published var lessons: [ELesson] = []
+  @Published var changes: [String: [EChange]] = [:]
   @Published var date: Date = Editor.firstDate()
   @Published private(set) var dirty = false
   @Published var saving = false
   @Published var toast: String? = nil
 
-  private var raw: [String: Any] = [:]
+  var raw: [String: Any] = [:]          // рабочая копия всего файла
+  private var orig: [String: Any] = [:] // как было при загрузке или последнем сохранении
+  @Published var altOpen = false        // открыт «Редактор 2»: «Неделя» работает с расписанием телефона 2
   private var base = ""
   private var sha = ""
   private var token = ""
@@ -200,7 +202,7 @@ final class Editor: ObservableObject {
   func logout() { Keychain.set(nil); token = ""; phase = .login(nil) }
 
   private func setData(_ o: [String: Any]) {
-    raw = o
+    raw = o; orig = o; altOpen = false
     lessons = (o["lessons"] as? [[String: Any]] ?? []).map(ELesson.init)
     var ch: [String: [EChange]] = [:]
     for (k, v) in o["changes"] as? [String: Any] ?? [:] { if let a = v as? [[String: Any]] { ch[k] = a.map(EChange.init) } }
@@ -208,16 +210,40 @@ final class Editor: ObservableObject {
     base = Format.body(current)
     dirty = false
   }
-  private var current: [String: Any] {
+  // Весь файл, как он будет сохранён. Если открыт «Редактор 2», пары и изменения возвращаются на свои места
+  var current: [String: Any] {
     var o = raw
-    o["lessons"] = lessons.map { $0.dict }
     var ch: [String: Any] = [:]
     for (k, v) in changes where !v.isEmpty { ch[k] = v.map { $0.dict } }
-    o["changes"] = ch
+    if altOpen {
+      var alt = o["alt"] as? [String: Any] ?? [:]
+      o["lessons"] = alt["lessons"] ?? []
+      o["changes"] = alt["changes"] ?? [:]
+      alt["lessons"] = lessons.map { $0.dict }
+      alt["changes"] = ch
+      o["alt"] = alt
+    } else {
+      o["lessons"] = lessons.map { $0.dict }
+      o["changes"] = ch
+    }
     return o
   }
-  private func touched() { dirty = Format.body(current) != base }
-  func undo() { setData(raw) ; Haptic.tap() }
+  func touched() { dirty = Format.body(current) != base }
+  func undo() { let a = altOpen; setData(orig); if a { swapAlt() }; Haptic.tap() }
+  // Меняет местами общее расписание и расписание телефона 2
+  func swapAlt() {
+    var alt = raw["alt"] as? [String: Any] ?? [:]
+    var ch: [String: Any] = [:]
+    for (k, v) in changes where !v.isEmpty { ch[k] = v.map { $0.dict } }
+    let L = alt["lessons"] as? [[String: Any]] ?? [], C = alt["changes"] as? [String: Any] ?? [:]
+    alt["lessons"] = lessons.map { $0.dict }; alt["changes"] = ch
+    raw["alt"] = alt
+    lessons = L.map(ELesson.init)
+    var nc: [String: [EChange]] = [:]
+    for (k, v) in C { if let a = v as? [[String: Any]] { nc[k] = a.map(EChange.init) } }
+    changes = nc
+    altOpen.toggle()
+  }
 
   func save(store: Store) async {
     let err = Format.check(current)
@@ -227,7 +253,9 @@ final class Editor: ObservableObject {
     defer { saving = false }
     do {
       sha = try await GH.save(token, text: text, sha: sha)
+      let wasAlt = altOpen
       if let o = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] { setData(o) }
+      if wasAlt { swapAlt() }
       store.adopt(Data(text.utf8)) // у самого старосты приложение обновится сразу
       Haptic.ok()
       show("Сохранено. У всех обновится через 1-2 минуты")

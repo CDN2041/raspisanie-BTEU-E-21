@@ -6,7 +6,6 @@ struct FullView: View {
   @EnvironmentObject var store: Store
   @EnvironmentObject var nav: Nav
   @Namespace private var ns
-  @State private var stripW: CGFloat = 1
 
   var body: some View {
     Group {
@@ -105,46 +104,28 @@ struct FullView: View {
     return mnum(mon) == mnum(e) ? "\(dnum(mon))-\(dnum(e)) " + MONF[mnum(mon)] : "\(dnum(mon)) " + MON[mnum(mon)] + " - \(dnum(e)) " + MON[mnum(e)]
   }
 
-  // Дни недели, как в редакторе: стеклянная полоса, выбранный день залит.
-  // Можно зажать и вести пальцем: день меняется под пальцем
+  // Дни недели: стеклянная полоса, зажать и вести пальцем, как панель вкладок в Apple Music
   func strip(_ sc: Sched, _ t: Date) -> some View {
     let mon = mondayOf(nav.sel), nd = shownDays(sc, mon), today = day0(t)
-    return HStack(spacing: 2) {
-      ForEach(0..<nd, id: \.self) { i in
-        let d = addDays(mon, i)
-        let c = sc.active(sc.lessonsFor(d)).count, its = sc.itemsFor(d)
-        let lbl = c > 0 ? "\(c) п." : !its.isEmpty ? (KSHORT[its[0].kind ?? "other"] ?? "") : "·"
-        let isSel = d == nav.sel, isToday = d == today, hn = store.dayHasNote(d), off = sc.beforeStart(d)
-        let base: Color = hn ? C.note : C.fg
-        Button {
-          guard !off else { return }
-          withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { nav.sel = d }
-        } label: {
-          VStack(spacing: 1) {
-            Text(DSHORT[i]).font(.b(12, 600)).foregroundColor(isSel ? C.bg.opacity(0.75) : (hn ? C.note : (isToday ? C.fg : C.muted)))
-            Text("\(dnum(d))").font(.m(17, 700)).monospacedDigit().foregroundColor(isSel ? C.bg : (hn ? C.note : C.fg.opacity(isToday ? 1 : 0.8)))
-              .underline(isToday && !isSel, color: base)
-            Text(lbl).font(.b(11)).monospacedDigit().foregroundColor(isSel ? C.bg.opacity(0.75) : (hn ? C.note : C.muted))
-          }
-          .frame(maxWidth: .infinity).padding(.vertical, 7)
-          .background {
-            if isSel { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(base).matchedGeometryEffect(id: "sel", in: ns) }
-            else if hn { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(C.noteSoft) }
-          }
-        }
-        .buttonStyle(Press(scale: 0.93))
-        .opacity(off ? 0.25 : 1)
+    let idx = max(0, min(nd - 1, daysBetween(mon, nav.sel)))
+    return Lens(count: nd, index: idx, height: 58, radius: 18,
+                fill: { store.dayHasNote(addDays(mon, $0)) ? C.note : C.fg },
+                disabled: { sc.beforeStart(addDays(mon, $0)) },
+                onPick: { i in withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { nav.sel = addDays(mon, i) } }) { i, sel in
+      let d = addDays(mon, i)
+      let c = sc.active(sc.lessonsFor(d)).count, its = sc.itemsFor(d)
+      let lbl = c > 0 ? "\(c) п." : !its.isEmpty ? (KSHORT[its[0].kind ?? "other"] ?? "") : "·"
+      let isToday = d == today, hn = store.dayHasNote(d)
+      VStack(spacing: 1) {
+        Text(DSHORT[i]).font(.b(12, 600)).foregroundColor(sel ? C.bg.opacity(0.75) : (hn ? C.note : (isToday ? C.fg : C.muted)))
+        Text("\(dnum(d))").font(.m(17, 700)).monospacedDigit().foregroundColor(sel ? C.bg : (hn ? C.note : C.fg.opacity(isToday ? 1 : 0.8)))
+          .underline(isToday && !sel)
+        Text(lbl).font(.b(11)).monospacedDigit().foregroundColor(sel ? C.bg.opacity(0.75) : (hn ? C.note : C.muted))
       }
+      .background { if hn && !sel { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(C.noteSoft).frame(width: 46, height: 56) } }
     }
     .padding(3)
     .glass(RoundedRectangle(cornerRadius: 22, style: .continuous))
-    .background(GeometryReader { g in Color.clear.onAppear { stripW = g.size.width }.onChange(of: g.size.width) { stripW = $0 } })
-    .gesture(DragGesture(minimumDistance: 6).onChanged { v in
-      let i = max(0, min(nd - 1, Int(v.location.x / max(1, stripW / CGFloat(nd)))))
-      let d = addDays(mon, i)
-      guard d != nav.sel, !sc.beforeStart(d) else { return }
-      withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { nav.sel = d }
-    })
   }
 
   // ---------- Дни ----------

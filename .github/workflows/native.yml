@@ -6,6 +6,10 @@ on:
     paths: ["native/**", ".github/workflows/native.yml"]
 permissions:
   contents: write
+# Новая сборка отменяет старую, чтобы старая не перезаписала релиз
+concurrency:
+  group: native
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: macos-15

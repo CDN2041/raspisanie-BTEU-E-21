@@ -101,15 +101,14 @@ struct EditorMain: View {
   @ObservedObject var ed: Editor
   @Binding var web: Bool
   let close: () -> Void
-  @State private var tab = "week"
+  @State private var tab = Shot.screen == "editor-gen" ? "gen" : Shot.screen == "editor-sess" ? "sess" : "week"
   @State private var pick: PickMode? = nil
   @State private var form: FormRef? = nil
   @State private var forever: Int? = nil
   @State private var askClose = false
-  @State private var askWeb = false
-  @State private var stripW: CGFloat = 1
-  @State private var dir = 1
-  @Namespace private var ns
+  @State private var pageX: CGFloat = 0     // листание дней: карточки едут за пальцем
+  @State private var pageOn: Double = 1
+  @State private var lock = 0               // 1 жест по горизонтали, 2 по вертикали
 
   var body: some View {
     ScrollView {
@@ -119,11 +118,19 @@ struct EditorMain: View {
           Spacer()
           if !ed.login.isEmpty { Text("@" + ed.login).font(.b(13)).foregroundColor(C.muted) }
         }
-        Text("Редактор").font(.d(28, 700)).foregroundColor(C.fg)
-        Seg(items: [("week", "Неделя"), ("sess", "Сессия"), ("gen", "Общее")], value: Binding(get: { tab }, set: { v in
-          if v == "week" { tab = v } else if ed.dirty { askWeb = true } else { web = true }
-        }))
-        week
+        Text(ed.altOpen ? "Редактор 2" : "Редактор").font(.d(28, 700)).foregroundColor(C.fg)
+          .id(ed.altOpen).transition(.opacity)
+        if ed.altOpen { altBanner }
+        Seg(items: ed.altOpen ? [("week", "Неделя")] : [("week", "Неделя"), ("sess", "Сессия"), ("gen", "Общее")],
+            value: Binding(get: { tab }, set: { v in withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) { tab = v } }))
+        Group {
+          switch tab {
+          case "sess": SessionTab(ed: ed)
+          case "gen": GeneralTab(ed: ed, openAlt: { tab = "week" })
+          default: week
+          }
+        }
+        .transition(.opacity.combined(with: .offset(y: 8)))
       }
       .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 110)
       .frame(maxWidth: 560).frame(maxWidth: .infinity)
@@ -141,9 +148,18 @@ struct EditorMain: View {
       Button("Остаться", role: .cancel) {}
       Button("Закрыть", role: .destructive) { close() }
     } message: { Text("Несохранённые изменения пропадут.") }
-    .alert("Сначала сохраните", isPresented: $askWeb) {
-      Button("Понятно", role: .cancel) {}
-    } message: { Text("Вкладки «Сессия» и «Общее» пока в веб-редакторе. Сохраните или отмените изменения в «Неделе».") }
+  }
+
+  var altBanner: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text("Отдельное расписание телефона 2. Всё как во вкладке «Неделя», замены и отмены видны на нём так же, как у всех. Режим на телефоне: 20 раз быстро нажать на номер версии.")
+        .font(.b(13)).foregroundColor(C.muted)
+      FlowRow(spacing: 8) {
+        SmallBtn(title: "Выйти из редактора 2", icon: "chevron.left") { withAnimation { ed.closeAlt(); tab = "week" } }
+        SmallBtn(title: "Скопировать общее заново") { ed.altReset() }
+      }
+    }
+    .padding(14).card(20)
   }
 
   var saveBar: some View {
@@ -178,48 +194,35 @@ struct EditorMain: View {
         Spacer()
         Tag(text: WEEKS[wt] ?? "", style: .prac)
       }
-      HStack(spacing: 4) {
-        ForEach(0..<6, id: \.self) { i in
-          let x = addDays(mon, i), on = i == wd(d)
-          Button {
-            Haptic.pick()
-            dir = x > ed.date ? 1 : -1
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { ed.date = x }
-          } label: {
-            Text(DSHORT[i] + " \(dnum(x))").font(.b(14, on ? 600 : 500)).lineLimit(1).minimumScaleFactor(0.7)
-              .foregroundColor(on ? C.bg : C.muted).frame(maxWidth: .infinity).padding(.vertical, 10)
-              .background { if on { Capsule().fill(C.fg).matchedGeometryEffect(id: "d", in: ns) } }
-          }.buttonStyle(Press(scale: 0.94))
-        }
+      Lens(count: 6, index: wd(d), height: 40, radius: 20, onPick: { i in flip(to: addDays(mon, i)) }) { i, sel in
+        Text(DSHORT[i] + " \(dnum(addDays(mon, i)))").font(.b(14, sel ? 600 : 500)).lineLimit(1).minimumScaleFactor(0.7)
+          .foregroundColor(sel ? C.bg : C.muted)
       }
       .padding(3).glass(Capsule())
-      // Зажать и вести пальцем по дням: день меняется под пальцем
-      .background(GeometryReader { g in Color.clear.onAppear { stripW = g.size.width }.onChange(of: g.size.width) { stripW = $0 } })
-      .gesture(DragGesture(minimumDistance: 6).onChanged { v in
-        let i = max(0, min(5, Int(v.location.x / max(1, stripW / 6))))
-        let x = addDays(mon, i)
-        if x != ed.date {
-          Haptic.pick()
-          dir = x > ed.date ? 1 : -1
-          withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { ed.date = x }
-        }
-      })
     }
     .padding(14).card(20)
 
-    // Свайп по парам влево и вправо: соседний день
+    // Пары листаются пальцем, как в расписании: тянешь, они едут, отпустил, и открылся соседний день
     VStack(spacing: 10) {
       ForEach(Array(ed.bells.enumerated()), id: \.offset) { bi, bl in
         slot(bi + 1, bl, d: d, k: k, wt: wt, b: by[bi + 1])
       }
     }
-    .id(k)
-    .transition(.asymmetric(insertion: .offset(x: CGFloat(dir) * 40).combined(with: .opacity), removal: .opacity))
-    .simultaneousGesture(DragGesture(minimumDistance: 25).onEnded { v in
-      let dx = v.translation.width, dy = v.translation.height
-      guard abs(dx) > 60, abs(dx) > abs(dy) * 1.5 else { return }
-      shiftDay(dx < 0 ? 1 : -1)
-    })
+    .offset(x: pageX)
+    .opacity(pageOn)
+    .simultaneousGesture(DragGesture(minimumDistance: 12)
+      .onChanged { v in
+        let dx = v.translation.width, dy = v.translation.height
+        if lock == 0 { lock = abs(dx) > abs(dy) * 1.3 ? 1 : 2 }
+        if lock == 1 { pageX = dx }
+      }
+      .onEnded { v in
+        defer { lock = 0 }
+        guard lock == 1 else { return }
+        let dx = v.translation.width + (v.predictedEndTranslation.width - v.translation.width) * 0.25
+        if abs(dx) > 80, let to = neighbor(dx < 0 ? 1 : -1) { flip(to: to, from: v.translation.width) }
+        else { withAnimation(.spring(response: 0.42, dampingFraction: 0.8)) { pageX = 0 } }
+      })
 
     Btn(title: "Новая пара", kind: .primary) {
       form = FormRef(i: nil, l: { var l = ELesson(); l.d = wd(d); l.p = firstFree(wd(d)); l.t = "lec"; return l }())
@@ -229,14 +232,28 @@ struct EditorMain: View {
     changesList
   }
 
-  func shiftDay(_ n: Int) {
+  func neighbor(_ n: Int) -> Date? {
     var x = addDays(ed.date, n)
     if weekday(x) == 0 { x = addDays(x, n) }
-    if let s = ed.start, x < s { return }
-    if let e = ed.end, x > e { return }
+    if let s = ed.start, x < s { return nil }
+    if let e = ed.end, x > e { return nil }
+    return x
+  }
+  // Перелистывание: старые карточки уезжают в одну сторону, новые приезжают с другой
+  func flip(to d0: Date, from start: CGFloat = 0) {
+    var to = day0(d0)
+    if weekday(to) == 0 { to = addDays(to, 1) }
+    if let s = ed.start, to < s { to = s }
+    guard to != ed.date else { withAnimation(.spring(response: 0.42, dampingFraction: 0.8)) { pageX = 0 }; return }
+    let n: CGFloat = to > ed.date ? 1 : -1, W: CGFloat = 380
     Haptic.pick()
-    dir = n
-    withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) { ed.date = x }
+    pageX = start
+    withAnimation(.easeIn(duration: 0.14)) { pageX = -n * W; pageOn = 0.2 }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
+      ed.date = to
+      pageX = n * W
+      withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) { pageX = 0; pageOn = 1 }
+    }
   }
   func firstFree(_ w: Int) -> Int {
     for p in 1...max(1, ed.bells.count) where !ed.lessons.contains(where: { $0.d == w && $0.p == p }) { return p }
@@ -248,12 +265,7 @@ struct EditorMain: View {
     }.buttonStyle(Press(scale: 0.92))
   }
   // Листаем на первый день недели; воскресенье превращается в понедельник
-  func go(_ d0: Date, exact: Bool = false) {
-    var d = day0(d0)
-    if let s = ed.start, d < s { d = s }
-    if weekday(d) == 0 { d = addDays(d, 1) }
-    withAnimation(.spring(response: 0.45, dampingFraction: 0.88)) { ed.date = d }
-  }
+  func go(_ d0: Date, exact: Bool = false) { flip(to: d0) }
 
   @ViewBuilder
   func slot(_ p: Int, _ bl: [String], d: Date, k: String, wt: String, b: ELesson?) -> some View {
@@ -380,11 +392,12 @@ struct ECardView<Acts: View>: View {
   var faded = false
   var free = false
   var onTap: (() -> Void)? = nil
+  var top: String? = nil
   @ViewBuilder var acts: () -> Acts
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
       VStack(alignment: .leading, spacing: 0) {
-        Text("\(p) ПАРА").font(.b(11, 600)).tracking(0.44).foregroundColor(C.muted).padding(.bottom, 2)
+        Text(top ?? "\(p) ПАРА").font(.b(11, 600)).tracking(0.44).foregroundColor(C.muted).padding(.bottom, 2)
         Text(t0).font(.m(17, 700)).foregroundColor(C.fg)
         Text(t1).font(.m(13)).foregroundColor(C.muted)
       }.frame(width: 62, alignment: .leading)
