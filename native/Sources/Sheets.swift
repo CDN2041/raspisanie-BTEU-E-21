@@ -44,7 +44,7 @@ struct SettingsSheet: View {
       }
     }
     .padding(.horizontal, 20).padding(.top, 28).padding(.bottom, 12)
-    .sheetLook([.height(370)])
+    .sheetLook([.height(330)])
   }
 }
 
@@ -136,11 +136,12 @@ struct CalendarSheet: View {
             Btn(title: "Закрыть") { dismiss() }
           }
         }
+        .frame(maxHeight: .infinity, alignment: .top)
         .onAppear { month = monthClamp(sc, nav.sel) }
       }
     }
     .padding(.horizontal, 20).padding(.top, 28).padding(.bottom, 12)
-    .sheetLook([.height(560)])
+    .sheetLook([.height(500)])
   }
 
   func monthClamp(_ sc: Sched, _ d: Date) -> Date {
@@ -224,7 +225,7 @@ struct EditorView: View {
   @Environment(\.dismiss) private var dismiss
   var body: some View {
     EditorWeb(onClose: { nf in
-      store.setNoFive(nf)
+      if let nf { store.setNoFive(nf) }
       dismiss()
     })
     .ignoresSafeArea()
@@ -233,7 +234,7 @@ struct EditorView: View {
 }
 
 struct EditorWeb: UIViewRepresentable {
-  let onClose: (Bool) -> Void
+  let onClose: (Bool?) -> Void
   func makeCoordinator() -> Co { Co(onClose) }
   func makeUIView(context: Context) -> WKWebView {
     let c = WKWebViewConfiguration()
@@ -250,8 +251,8 @@ struct EditorWeb: UIViewRepresentable {
   func updateUIView(_ v: WKWebView, context: Context) {}
 
   final class Co: NSObject, WKNavigationDelegate {
-    let onClose: (Bool) -> Void
-    init(_ c: @escaping (Bool) -> Void) { onClose = c }
+    let onClose: (Bool?) -> Void
+    init(_ c: @escaping (Bool?) -> Void) { onClose = c }
     func webView(_ w: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler h: @escaping (WKNavigationActionPolicy) -> Void) {
       guard let u = a.request.url else { return h(.allow) }
       let s = u.absoluteString
@@ -270,7 +271,7 @@ struct EditorWeb: UIViewRepresentable {
     }
     // Без интернета редактор не открыть: возвращаемся в приложение
     func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) {
-      DispatchQueue.main.async { self.onClose(false) }
+      DispatchQueue.main.async { self.onClose(nil) }
     }
   }
 }
