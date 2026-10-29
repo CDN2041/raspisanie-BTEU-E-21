@@ -82,6 +82,9 @@ enum Keychain {
 enum GH {
   static let repo = "CDN2041/raspisanie-BTEU-E-21"
   static let api = URL(string: "https://api.github.com/repos/\(repo)/contents/schedule.json")!
+  // Проверка сохранения в сборке: временный ключ сборки и отдельная тестовая ветка вместо main
+  static let testToken = Shot.env["TEST_TOKEN"]
+  static let branch = Shot.env["TEST_BRANCH"] ?? "main"
   struct Err: LocalizedError { let text: String; var status = 0; var net = false; var errorDescription: String? { text } }
 
   static func req(_ url: URL, _ token: String, method: String = "GET", body: [String: Any]? = nil) -> URLRequest {
@@ -101,6 +104,11 @@ enum GH {
 
   // Ключ проверяется при каждом входе, как на сайте: настоящий ли, есть ли доступ и право записи
   static func check(_ t: String) async throws -> String {
+    if testToken != nil { // ключ сборки: проверяем только право записи
+      let (_, w) = try await send(req(URL(string: "https://api.github.com/repos/\(repo)/git/blobs")!, t, method: "POST", body: ["content": "", "encoding": "utf-8"]))
+      if !(200..<300).contains(w.statusCode) { throw Err(text: "У ключа нет права на запись (\(w.statusCode))") }
+      return "test"
+    }
     guard t.range(of: #"^(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})$"#, options: .regularExpression) != nil else {
       throw Err(text: "Это не ключ GitHub. Ключ начинается с ghp_ и состоит из латинских букв и цифр. Скопируйте его целиком.")
     }
@@ -126,7 +134,7 @@ enum GH {
 
   static func load(_ t: String) async throws -> (sha: String, data: [String: Any]) {
     var c = URLComponents(url: api, resolvingAgainstBaseURL: false)!
-    c.queryItems = [URLQueryItem(name: "ref", value: "main")]
+    c.queryItems = [URLQueryItem(name: "ref", value: branch)]
     let (d, r) = try await send(req(c.url!, t))
     guard r.statusCode == 200, let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
           let sha = j["sha"] as? String, let b64 = j["content"] as? String,
@@ -138,7 +146,7 @@ enum GH {
   }
 
   static func save(_ t: String, text: String, sha: String) async throws -> String {
-    let body: [String: Any] = ["message": "Update", "content": Data(text.utf8).base64EncodedString(), "sha": sha, "branch": "main"]
+    let body: [String: Any] = ["message": "Update", "content": Data(text.utf8).base64EncodedString(), "sha": sha, "branch": branch]
     let (d, r) = try await send(req(api, t, method: "PUT", body: body))
     guard (200..<300).contains(r.statusCode) else {
       let s = r.statusCode
@@ -175,6 +183,7 @@ final class Editor: ObservableObject {
   static func firstDate() -> Date { var d = day0(Date()); if weekday(d) == 0 { d = addDays(d, 1) }; return d }
 
   func open(store: Store) async {
+    if let t = GH.testToken { await selfTest(t, store: store); return }
     if Shot.on { // для скриншотов: расписание из сборки, без ключа и сети
       if let o = Shared.parse(Shared.readSchedule()) { setData(o) }
       login = "CDN2041"; date = day0(Shot.now ?? Date()); phase = .ready
@@ -198,6 +207,21 @@ final class Editor: ObservableObject {
     } catch let e as GH.Err {
       if e.net { phase = .failed(e.text) } else { Keychain.set(nil); phase = .login(e.text) }
     } catch { phase = .failed(error.localizedDescription) }
+  }
+  // Самопроверка в сборке: войти, отменить 1 пару 26 октября, сохранить, записать итог в файл
+  func selfTest(_ t: String, store: Store) async {
+    var log = "start\n"
+    await enter(t)
+    log += "phase=\(phase)\n"
+    if phase == .ready {
+      let k = "2026-10-26"
+      cancel(k, 1)
+      log += "dirty=\(dirty)\n"
+      await save(store: store)
+      log += "toast=\(toast ?? "")\ndirty_after=\(dirty)\n"
+    }
+    let u = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("selftest.txt")
+    try? log.write(to: u, atomically: true, encoding: .utf8)
   }
   func logout() { Keychain.set(nil); token = ""; phase = .login(nil) }
 

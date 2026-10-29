@@ -29,6 +29,10 @@ jobs:
           curl -sSLf -o JetBrainsMono.ttf "$B/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
       - name: Build simulator
         run: native/build.sh iphonesimulator
+      - name: Save test
+        continue-on-error: true
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: native/savetest.sh
       - name: Screenshots
         continue-on-error: true
         run: native/shots.sh
