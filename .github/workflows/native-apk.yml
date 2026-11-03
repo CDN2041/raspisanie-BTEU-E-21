@@ -54,5 +54,5 @@ jobs:
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           gh release delete native-apk --yes --cleanup-tag || true
-          gh release create native-apk pary-native.apk $(ls native-android/build/shots/* 2>/dev/null) --prerelease --target native \
+          gh release create native-apk pary-native.apk $(find native-android/build/shots -type f -size +0 2>/dev/null) --prerelease --target native \
             --title "Пары Е-21 для Android, нативная (тест)" --notes "Сборка ${{ github.run_number }}. Ставится поверх старой версии, заметки переносятся."
