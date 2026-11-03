@@ -1,0 +1,58 @@
+name: Native APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [native]
+    paths: ["native-android/**", ".github/workflows/native-apk.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: native-apk
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v5
+        with: { gradle-version: "8.11.1" }
+      - name: Fonts and data
+        working-directory: native-android/app/src/main
+        run: |
+          mkdir -p res/font assets
+          B=https://github.com/google/fonts/raw/main/ofl
+          curl -sSLf -o res/font/golos.ttf "$B/golostext/GolosText%5Bwght%5D.ttf"
+          curl -sSLf -o res/font/unbounded.ttf "$B/unbounded/Unbounded%5Bwght%5D.ttf"
+          curl -sSLf -o res/font/jbmono.ttf "$B/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+          cp ../../../../schedule.json assets/
+      - name: Build
+        working-directory: native-android
+        env:
+          KS_PASS: "nNwDXkoio-Lakuun2d0lfqsZ"
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          export KS_FILE="$PWD/pary.jks"
+          if ! gradle assembleRelease --no-daemon > build.log 2>&1; then grep -E "^e: |rror|wrong|FAIL" build.log | head -40 | while IFS= read -r l; do echo "::error::${l#*/pary/}"; done; exit 1; fi
+          cp app/build/outputs/apk/release/app-release.apk ../pary-native.apk
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Screenshots
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          script: native-android/shots.sh
+      - name: Release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release delete native-apk --yes --cleanup-tag || true
+          gh release create native-apk pary-native.apk $(ls native-android/build/shots/* 2>/dev/null) --prerelease --target native \
+            --title "Пары Е-21 для Android, нативная (тест)" --notes "Сборка ${{ github.run_number }}. Ставится поверх старой версии, заметки переносятся."
