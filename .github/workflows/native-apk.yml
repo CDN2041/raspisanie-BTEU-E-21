@@ -21,12 +21,13 @@ jobs:
       - name: Fonts and data
         working-directory: native-android/app/src/main
         run: |
-          mkdir -p res/font assets
+          mkdir -p res/font assets ../../../wear/src/main/assets
           B=https://github.com/google/fonts/raw/main/ofl
           curl -sSLf -o res/font/golos.ttf "$B/golostext/GolosText%5Bwght%5D.ttf"
           curl -sSLf -o res/font/unbounded.ttf "$B/unbounded/Unbounded%5Bwght%5D.ttf"
           curl -sSLf -o res/font/jbmono.ttf "$B/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
           cp ../../../../schedule.json assets/
+          cp ../../../../schedule.json ../../../wear/src/main/assets/
       - name: Build
         working-directory: native-android
         env:
@@ -34,8 +35,9 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: |
           export KS_FILE="$PWD/pary.jks"
-          if ! gradle assembleRelease --no-daemon > build.log 2>&1; then grep -E "^e: |rror|wrong|FAIL" build.log | head -40 | while IFS= read -r l; do echo "::error::${l#*/pary/}"; done; exit 1; fi
+          if ! gradle :app:assembleRelease :wear:assembleRelease --no-daemon > build.log 2>&1; then grep -E "^e: |rror|wrong|FAIL" build.log | head -40 | while IFS= read -r l; do echo "::error::${l#*/pary/}"; done; exit 1; fi
           cp app/build/outputs/apk/release/app-release.apk ../pary-native.apk
+          cp wear/build/outputs/apk/release/wear-release.apk ../pary-wear.apk
       - name: KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -50,9 +52,19 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: native-android/shots.sh
+      - name: Wear screenshots
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          target: android-wear
+          profile: wearos_large_round
+          disable-animations: true
+          script: native-android/shots-wear.sh
       - name: Release
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           gh release delete native-apk --yes --cleanup-tag || true
-          gh release create native-apk pary-native.apk $(find native-android/build/shots -type f -size +0 2>/dev/null) --prerelease --target native \
-            --title "Пары Е-21 для Android, нативная (тест)" --notes "Сборка ${{ github.run_number }}. Ставится поверх старой версии, заметки переносятся."
+          gh release create native-apk pary-native.apk pary-wear.apk $(find native-android/build/shots -type f -size +0 2>/dev/null) --prerelease --target native \
+            --title "Пары Е-21 для Android, нативная (тест)" --notes "Сборка ${{ github.run_number }}. pary-native.apk для телефона (ставится поверх старой версии, заметки переносятся), pary-wear.apk для часов Wear OS."
