@@ -35,6 +35,31 @@ xcrun actool AppIcon.icon Assets.xcassets --compile "$APP" --platform "$PLAT" --
   || { sed 's/^/::error::/' "$OUT/icon.log" | head -20; exit 1; }
 /usr/libexec/PlistBuddy -c "Merge $OUT/partial.plist" "$APP/Info.plist"
 printf 'APPL????' > "$APP/PkgInfo"
+# Часы: отдельное приложение внутри Watch/, ставится с айфона
+WA="$APP/Watch/ParyWatch.app"
+mkdir -p "$WA"
+if [ "$PLAT" = iphoneos ]; then WS=watchos; WT="arm64_32-apple-watchos10.0 arm64-apple-watchos10.0"; else WS=watchsimulator; WT="arm64-apple-watchos10.0-simulator"; fi
+WSDK=$(xcrun --sdk $WS --show-sdk-path)
+for T in $WT; do
+  xcrun --sdk $WS swiftc -O -parse-as-library -sdk "$WSDK" -target "$T" Watch/*.swift Sources/Model.swift Sources/WidgetState.swift \
+    -o "$OUT/ParyWatch-$T" > "$OUT/watch.log" 2>&1 || fail "$OUT/watch.log"
+done
+xcrun lipo -create "$OUT"/ParyWatch-* -output "$WA/ParyWatch"
+cp Watch/Info.plist "$WA/Info.plist"
+plutil -replace CFBundleVersion -string "${BUILD_N:-1}" "$WA/Info.plist"
+if [ "$WS" = watchsimulator ]; then
+  plutil -replace CFBundleSupportedPlatforms -json '["WatchSimulator"]' "$WA/Info.plist"
+  plutil -replace DTPlatformName -string watchsimulator "$WA/Info.plist"
+fi
+plutil -replace DTSDKName -string "$WS$(xcrun --sdk $WS --show-sdk-version)" "$WA/Info.plist"
+plutil -replace DTPlatformVersion -string "$(xcrun --sdk $WS --show-sdk-version)" "$WA/Info.plist"
+cp ../schedule.json build/fonts/GolosText.ttf build/fonts/JetBrainsMono.ttf "$WA/"
+xcrun actool Watch/Assets.xcassets --compile "$WA" --platform $WS --minimum-deployment-target 10.0 \
+  --app-icon AppIcon --target-device watch --output-partial-info-plist "$OUT/wpartial.plist" > "$OUT/wicon.log" 2>&1 \
+  || { sed 's/^/::error::/' "$OUT/wicon.log" | head -20; exit 1; }
+/usr/libexec/PlistBuddy -c "Merge $OUT/wpartial.plist" "$WA/Info.plist"
+printf 'APPL????' > "$WA/PkgInfo"
+codesign -f -s - "$WA" >/dev/null
 # Подпись без сертификата, но с общей группой: Sideloadly перенесёт её в свою подпись
 codesign -f -s - --entitlements ent.plist "$WX" >/dev/null
 codesign -f -s - --entitlements ent.plist "$APP" >/dev/null

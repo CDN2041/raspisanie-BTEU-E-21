@@ -36,6 +36,9 @@ jobs:
       - name: Screenshots
         continue-on-error: true
         run: native/shots.sh
+      - name: Watch screenshots
+        continue-on-error: true
+        run: native/watchshots.sh
       - name: Build IPA
         env: { BUILD_N: "${{ github.run_number }}" }
         run: native/build.sh iphoneos
@@ -44,4 +47,4 @@ jobs:
         run: |
           gh release delete native --yes --cleanup-tag || true
           gh release create native native/pary-native.ipa $(ls native/build/shots/*.png native/build/shots/*.txt 2>/dev/null) --prerelease --target native \
-            --title "Пары Е-21 нативная (тест)" --notes "Сборка ${{ github.run_number }}. Тестовая нативная версия для iPad и iPhone."
+            --title "Пары Е-21 нативная (тест)" --notes "Сборка ${{ github.run_number }}. Тестовая нативная версия для iPad, iPhone и Apple Watch."
