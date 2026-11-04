@@ -32,6 +32,10 @@ shoot() { # устройство, префикс, экраны...
     xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH.png" >/dev/null 2>&1
     echo "shot $P-$SC-$TH"
     xcrun simctl spawn "$U" launchctl list 2>/dev/null | grep -q by.cdn2041.pary || echo "== $P-$SC-$TH: приложение не запущено" >> build/shots/diag.txt
+    if [ "$SC" = live ]; then
+      sleep 12; xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH-late.png" >/dev/null 2>&1
+      { echo "== log $SC $TH"; xcrun simctl spawn "$U" log show --last 40s --style compact --predicate 'process == "Pary"' 2>&1 | grep -iv "fault\|debug" | tail -40; } >> build/shots/live-log.txt
+    fi
   done
   # Экран «Домой»: иконка в светлой и тёмной теме
   xcrun simctl terminate "$U" by.cdn2041.pary || true
