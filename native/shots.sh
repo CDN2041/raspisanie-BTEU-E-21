@@ -31,6 +31,7 @@ shoot() { # устройство, префикс, экраны...
     sleep 6
     xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH.png" >/dev/null 2>&1
     echo "shot $P-$SC-$TH"
+    xcrun simctl spawn "$U" launchctl list 2>/dev/null | grep -q by.cdn2041.pary || echo "== $P-$SC-$TH: приложение не запущено" >> build/shots/diag.txt
   done
   # Экран «Домой»: иконка в светлой и тёмной теме
   xcrun simctl terminate "$U" by.cdn2041.pary || true
@@ -46,3 +47,7 @@ echo "iPhone $PH, iPad $PAD"
 shoot "$PH" phone editor:dark live:dark live:light
 [ -n "$PAD" ] && shoot "$PAD" ipad home:dark
 ls build/shots
+# Отчёты о падениях приложения, если были
+for f in $(ls -t ~/Library/Logs/DiagnosticReports/Pary* 2>/dev/null | head -2); do
+  head -c 60000 "$f" > "build/shots/crash-$(basename "$f" | tr -c 'A-Za-z0-9.\n-' '_').txt"
+done
