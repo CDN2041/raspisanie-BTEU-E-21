@@ -12,7 +12,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: macos-15
+    # Mac на ARM у GitHub часто заняты; Intel-сборщик свободнее
+    runs-on: ${{ vars.NATIVE_RUNNER || 'macos-15-intel' }}
     steps:
       - uses: actions/checkout@v5
       - name: Xcode

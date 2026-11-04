@@ -7,7 +7,7 @@ OUT=build/$PLAT
 APP=$OUT/Payload/Pary.app
 rm -rf "$OUT"; mkdir -p "$APP"
 SDK=$(xcrun --sdk "$PLAT" --show-sdk-path)
-if [ "$PLAT" = iphoneos ]; then TGT=arm64-apple-ios16.2; else TGT=arm64-apple-ios16.2-simulator; fi
+if [ "$PLAT" = iphoneos ]; then TGT=arm64-apple-ios16.2; else TGT=$(uname -m)-apple-ios16.2-simulator; fi
 fail() { grep -E "error:" "$1" | sort -u | head -40 | while IFS= read -r l; do echo "::error::${l#*native/}"; done; exit 1; }
 xcrun --sdk "$PLAT" swiftc -O -parse-as-library -sdk "$SDK" -target "$TGT" Sources/*.swift -o "$APP/Pary" > "$OUT/build.log" 2>&1 || fail "$OUT/build.log"
 # Виджет: отдельная программа внутри приложения, общие файлы модели и вида
@@ -38,7 +38,7 @@ printf 'APPL????' > "$APP/PkgInfo"
 # Часы: отдельное приложение внутри Watch/, ставится с айфона
 WA="$APP/Watch/ParyWatch.app"
 mkdir -p "$WA"
-if [ "$PLAT" = iphoneos ]; then WS=watchos; WT="arm64_32-apple-watchos10.0 arm64-apple-watchos10.0"; else WS=watchsimulator; WT="arm64-apple-watchos10.0-simulator"; fi
+if [ "$PLAT" = iphoneos ]; then WS=watchos; WT="arm64_32-apple-watchos10.0 arm64-apple-watchos10.0"; else WS=watchsimulator; WT="$(uname -m)-apple-watchos10.0-simulator"; fi
 WSDK=$(xcrun --sdk $WS --show-sdk-path)
 for T in $WT; do
   xcrun --sdk $WS swiftc -O -parse-as-library -sdk "$WSDK" -target "$T" Watch/*.swift Sources/Model.swift Sources/WidgetState.swift \
