@@ -7,14 +7,14 @@ OUT=build/$PLAT
 APP=$OUT/Payload/Pary.app
 rm -rf "$OUT"; mkdir -p "$APP"
 SDK=$(xcrun --sdk "$PLAT" --show-sdk-path)
-if [ "$PLAT" = iphoneos ]; then TGT=arm64-apple-ios16.0; else TGT=arm64-apple-ios16.0-simulator; fi
+if [ "$PLAT" = iphoneos ]; then TGT=arm64-apple-ios16.2; else TGT=arm64-apple-ios16.2-simulator; fi
 fail() { grep -E "error:" "$1" | sort -u | head -40 | while IFS= read -r l; do echo "::error::${l#*native/}"; done; exit 1; }
 xcrun --sdk "$PLAT" swiftc -O -parse-as-library -sdk "$SDK" -target "$TGT" Sources/*.swift -o "$APP/Pary" > "$OUT/build.log" 2>&1 || fail "$OUT/build.log"
 # Виджет: отдельная программа внутри приложения, общие файлы модели и вида
 WX="$APP/PlugIns/ParyWidget.appex"
 mkdir -p "$WX"
 xcrun --sdk "$PLAT" swiftc -O -parse-as-library -application-extension -sdk "$SDK" -target "$TGT" \
-  Widget/*.swift Sources/Model.swift Sources/Theme.swift Sources/Shared.swift Sources/WidgetState.swift Sources/WidgetViews.swift \
+  Widget/*.swift Sources/Model.swift Sources/Theme.swift Sources/Shared.swift Sources/WidgetState.swift Sources/WidgetViews.swift Sources/LiveState.swift Sources/LiveViews.swift \
   -Xlinker -e -Xlinker _NSExtensionMain -Xlinker -rpath -Xlinker @executable_path/../../Frameworks \
   -o "$WX/ParyWidget" > "$OUT/widget.log" 2>&1 || fail "$OUT/widget.log"
 cp Widget/Info.plist "$WX/Info.plist"
@@ -30,7 +30,7 @@ if [ "$PLAT" = iphonesimulator ]; then
 fi
 cp ../schedule.json format.js "$APP/"
 cp build/fonts/*.ttf "$APP/"
-xcrun actool AppIcon.icon Assets.xcassets --compile "$APP" --platform "$PLAT" --minimum-deployment-target 16.0 \
+xcrun actool AppIcon.icon Assets.xcassets --compile "$APP" --platform "$PLAT" --minimum-deployment-target 16.2 \
   --app-icon AppIcon --target-device iphone --target-device ipad --output-partial-info-plist "$OUT/partial.plist" > "$OUT/icon.log" 2>&1 \
   || { sed 's/^/::error::/' "$OUT/icon.log" | head -20; exit 1; }
 /usr/libexec/PlistBuddy -c "Merge $OUT/partial.plist" "$APP/Info.plist"

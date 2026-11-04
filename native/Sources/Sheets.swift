@@ -36,6 +36,7 @@ struct SettingsSheet: View {
           store.theme = v; store.saveSettings()
         }))
       }
+      LiveSettings()
       Spacer(minLength: 0)
       HStack(spacing: 10) {
         Btn(title: "Редактор") {
@@ -46,7 +47,7 @@ struct SettingsSheet: View {
       }
     }
     .padding(.horizontal, 20).padding(.top, 28).padding(.bottom, 12)
-    .sheetLook([.height(330)])
+    .sheetLook([.height(470)])
   }
 }
 
@@ -278,6 +279,38 @@ struct EditorWeb: UIViewRepresentable {
     // Без интернета редактор не открыть: возвращаемся в приложение
     func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) {
       DispatchQueue.main.async { self.onClose(nil) }
+    }
+  }
+}
+
+// Эфир активности: включать сам и вернуть после свайпа
+struct LiveSettings: View {
+  @EnvironmentObject var store: Store
+  @State private var auto = Live.auto
+  @State private var msg: String? = nil
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Eyebrow(text: "Эфир активности")
+      Toggle(isOn: Binding(get: { auto }, set: { v in
+        auto = v; Live.auto = v; Haptic.pick()
+        if !v { Task { await Live.stop() } } else { Task { await Live.sync(store.sched, force: true) } }
+      })) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Включать в учебный день").font(.b(15, 500)).foregroundColor(C.fg)
+          Text(msg ?? "На экране блокировки, в Dynamic Island и на часах").font(.b(12)).foregroundColor(msg == nil ? C.muted : C.note)
+        }
+      }
+      .tint(C.fg)
+      Btn(title: "Показать сейчас") {
+        Task {
+          if !Live.allowed { msg = "Эфиры выключены в настройках iPhone"; return }
+          switch await Live.sync(store.sched, force: true) {
+          case .shown: msg = "Эфир включён"; Haptic.ok()
+          case .noPairs: msg = "Сегодня пар больше нет"
+          case .off: msg = "Не получилось включить"
+          }
+        }
+      }
     }
   }
 }

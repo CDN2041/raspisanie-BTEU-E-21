@@ -13,8 +13,11 @@
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleSupportedPlatforms</key><array><string>iPhoneOS</string></array>
   <key>DTPlatformName</key><string>iphoneos</string>
-  <key>MinimumOSVersion</key><string>16.0</string>
+  <key>MinimumOSVersion</key><string>16.2</string>
   <key>LSRequiresIPhoneOS</key><true/>
+  <key>NSSupportsLiveActivities</key><true/>
+  <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>by.cdn2041.pary.live</string></array>
+  <key>UIBackgroundModes</key><array><string>fetch</string></array>
   <key>UIDeviceFamily</key><array><integer>1</integer><integer>2</integer></array>
   <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><true/></dict>
   <key>CFBundleURLTypes</key>

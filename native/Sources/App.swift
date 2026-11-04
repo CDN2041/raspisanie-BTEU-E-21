@@ -25,7 +25,7 @@ final class Nav: ObservableObject {
 struct ParyApp: App {
   @StateObject private var store = Store()
   @StateObject private var nav = Nav()
-  init() { Fonts.load() }
+  init() { Fonts.load(); Live.register() }
   var body: some Scene {
     WindowGroup {
       RootView().environmentObject(store).environmentObject(nav)
@@ -42,6 +42,7 @@ struct RootView: View {
     NavigationStack(path: $nav.path) {
       Group {
         if Shot.screen == "widgets" { WidgetGallery() }
+        else if Shot.screen == "live" { LiveGallery() }
         else if store.sched == nil { MessageView() }
         else if store.ui == "old" { FullView(root: true) }
         else { HomeView() }
@@ -66,10 +67,13 @@ struct RootView: View {
       shotSetup()
       store.migrate()
       await store.fetch(force: true)
+      await Live.sync(store.sched)
     }
+    .onChange(of: store.rev) { _ in Task { await Live.sync(store.sched) } }
     .onOpenURL { _ in nav.path = []; nav.note = nil; nav.settings = false; nav.calendar = false }
     .onChange(of: phase) { p in
-      if p == .active { store.touch(); Task { await store.fetch() } }
+      if p == .active { store.touch(); Task { await store.fetch(); await Live.sync(store.sched) } }
+      if p == .background { Task { await Live.sync(store.sched) } }
     }
   }
 

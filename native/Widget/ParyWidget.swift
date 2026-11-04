@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import ActivityKit
 
 struct Entry: TimelineEntry {
   let date: Date
@@ -22,12 +23,24 @@ struct Provider: TimelineProvider {
       guard let sc = load() else {
         return completion(Timeline(entries: [Entry(date: now, st: .placeholder)], policy: .after(now.addingTimeInterval(1800))))
       }
+      // Заодно двигаем эфир активности на следующую пару
+      let live = liveContent(sc, now)
+      await updateLive(sc, now, live)
       let times = widgetTimes(sc, from: now)
       let entries = times.map { Entry(date: $0, st: widgetState(sc, $0)) }
       // Пары кончились: следующее обновление в полночь, иначе после последней минуты
       let midnight = addDays(now, 1)
       let next = times.count > 1 ? min(times.last!.addingTimeInterval(60), midnight) : min(midnight, now.addingTimeInterval(3 * 3600))
-      completion(Timeline(entries: entries, policy: .after(next)))
+      let edge = live.map { $0.cd.addingTimeInterval(2) }
+      completion(Timeline(entries: entries, policy: .after(edge.map { min($0, next) } ?? next)))
+    }
+  }
+
+  private func updateLive(_ sc: Sched, _ now: Date, _ st: LiveState?) async {
+    let dk = key(day0(now))
+    for a in Activity<ParyAttributes>.activities where a.activityState == .active || a.activityState == .stale {
+      if let st, a.attributes.day == dk { await a.update(ActivityContent(state: st, staleDate: st.cd)) }
+      else { await a.end(nil, dismissalPolicy: .immediate) }
     }
   }
 
@@ -102,5 +115,6 @@ struct ParyWidgets: WidgetBundle {
   var body: some Widget {
     NowWidget()
     LockWidget()
+    ParyLive()
   }
 }
