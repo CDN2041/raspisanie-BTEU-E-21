@@ -6,13 +6,18 @@ struct FullView: View {
   @EnvironmentObject var store: Store
   @EnvironmentObject var nav: Nav
   @Namespace private var ns
+  @State private var headH: CGFloat = 0
+  @State private var offs: [Date: CGFloat] = [:]
 
   var body: some View {
     Group {
       if let sc = store.sched {
         TimelineView(.everyMinute) { ctx in
           let t = Shot.now ?? max(ctx.date, store.shown)
-          VStack(spacing: 0) {
+          // Шапка с неделей лежит поверх дней и уезжает вверх, когда день прокручивают вниз
+          let hide = min(max(offs[nav.sel] ?? 0, 0), headH)
+          ZStack(alignment: .top) {
+            pager(sc, t)
             VStack(spacing: 16) {
               topBar
               header(sc, t)
@@ -21,8 +26,15 @@ struct FullView: View {
             }
             .padding(.horizontal, 16).padding(.bottom, 12)
             .frame(maxWidth: 560).frame(maxWidth: .infinity)
-            pager(sc, t)
+            .background(C.bg)
+            .background(GeometryReader { g in Color.clear.onAppear { headH = g.size.height }.onChange(of: g.size.height) { headH = $0 } })
+            .offset(y: -hide)
+            .opacity(headH > 0 ? 1 - Double(hide / headH) * 0.6 : 1)
           }
+          .clipped()
+          // Полоса под часами и батареей: дни под ней не просвечивают
+          .overlay(alignment: .top) { C.bg.frame(height: 0).ignoresSafeArea(edges: .top) }
+          .onPreferenceChange(OffKey.self) { offs.merge($0) { _, n in n } }
         }
         .onAppear { nav.sel = sc.clamp(nav.sel) }
         .onChange(of: store.rev) { _ in if let s = store.sched { nav.sel = s.clamp(nav.sel) } }
@@ -134,11 +146,17 @@ struct FullView: View {
     TabView(selection: $nav.sel) {
       ForEach(sc.allDays, id: \.self) { d in
         ScrollView {
-          DayList(sc: sc, d: d, t: t)
-            .padding(.horizontal, 16).padding(.top, 4)
-            .frame(maxWidth: 560).frame(maxWidth: .infinity)
-          if root { VersionFooter() }
+          VStack(spacing: 0) {
+            DayList(sc: sc, d: d, t: t)
+              .padding(.horizontal, 16).padding(.top, 4 + headH)
+              .frame(maxWidth: 560).frame(maxWidth: .infinity)
+            if root { VersionFooter() }
+          }
+          .background(GeometryReader { g in
+            Color.clear.preference(key: OffKey.self, value: [d: -g.frame(in: .named(key(d))).minY])
+          })
         }
+        .coordinateSpace(name: key(d))
         .scrollIndicators(.hidden)
         .noBounce()
         .tag(d)
@@ -176,4 +194,10 @@ struct DayList: View {
     }
     .padding(.bottom, 24)
   }
+}
+
+// Насколько прокручен каждый день: по нему шапка уезжает вверх
+struct OffKey: PreferenceKey {
+  static var defaultValue: [Date: CGFloat] = [:]
+  static func reduce(value: inout [Date: CGFloat], nextValue: () -> [Date: CGFloat]) { value.merge(nextValue()) { _, n in n } }
 }
