@@ -30,3 +30,17 @@
 2. Нажми **⋮** справа вверху.
 3. Выбери **«Добавить на главный экран»** (или **«Установить приложение»**).
 4. Нажми **«Установить»** или **«Добавить»**.
+
+## Приложения
+
+Отдельные приложения вместо ярлыка сайта. Это тестовые сборки, ссылки всегда ведут на последнюю версию.
+
+| Устройство | Файл |
+| --- | --- |
+| iPhone и iPad | [pary-native.ipa](https://github.com/CDN2041/raspisanie-BTEU-E-21/releases/download/native/pary-native.ipa) |
+| Android | [pary-native.apk](https://github.com/CDN2041/raspisanie-BTEU-E-21/releases/download/native-apk/pary-native.apk) |
+| Часы Wear OS | [pary-wear.apk](https://github.com/CDN2041/raspisanie-BTEU-E-21/releases/download/native-apk/pary-wear.apk) |
+
+- **iPhone и iPad:** IPA ставится через Sideloadly или AltStore со своим Apple ID. Из App Store его не установить.
+- **Android:** открой скачанный APK и разреши установку из этого источника.
+- **Wear OS:** APK ставится на сами часы, например через Bugjaeger или Wear Installer 2 с включённой отладкой по Wi-Fi.
