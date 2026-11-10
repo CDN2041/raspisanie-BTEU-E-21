@@ -159,9 +159,9 @@ private fun Bar(f: Double, modifier: Modifier = Modifier) {
 @Composable
 private fun NowPage(sc: Sched, t: LocalDateTime) {
   val s = widgetState(sc, t)
-  val ls = rememberScalingLazyListState()
+  val ls = rememberScalingLazyListState(initialCenterItemIndex = 0)
   Scaffold(positionIndicator = { PositionIndicator(ls) }) {
-    ScalingLazyColumn(Modifier.fillMaxSize(), ls, contentPadding = PaddingValues(top = 28.dp, bottom = 36.dp, start = 14.dp, end = 14.dp),
+    ScalingLazyColumn(Modifier.fillMaxSize(), ls, contentPadding = PaddingValues(top = 30.dp, bottom = 40.dp, start = 14.dp, end = 14.dp), autoCentering = null,
       horizontalAlignment = Alignment.CenterHorizontally) {
       item { Text(s.date, style = mono(12), color = MUTED) }
       if (s.kind == WState.DONE) {
@@ -207,14 +207,14 @@ private fun nextDay(sc: Sched, td: LocalDate): Pair<LocalDate, Lesson>? {
 private fun DayPage(sc: Sched, t: LocalDateTime) {
   var day by remember { mutableStateOf(sc.clamp(t.toLocalDate())) }
   val list = sc.lessonsFor(day); val its = sc.itemsFor(day)
-  val ls = rememberScalingLazyListState()
+  val ls = rememberScalingLazyListState(initialCenterItemIndex = 0)
   fun step(by: Long): LocalDate {
     var x = day
     repeat(14) { x = x.plusDays(by); if (sc.inStrip(x)) return sc.clamp(x) }
     return day
   }
   Scaffold(positionIndicator = { PositionIndicator(ls) }) {
-    ScalingLazyColumn(Modifier.fillMaxSize(), ls, contentPadding = PaddingValues(top = 28.dp, bottom = 36.dp, start = 10.dp, end = 10.dp),
+    ScalingLazyColumn(Modifier.fillMaxSize(), ls, contentPadding = PaddingValues(top = 30.dp, bottom = 40.dp, start = 10.dp, end = 10.dp), autoCentering = null,
       horizontalAlignment = Alignment.CenterHorizontally) {
       item {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
