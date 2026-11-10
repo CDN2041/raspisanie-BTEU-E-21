@@ -41,7 +41,7 @@ struct Lens<Item: View>: View {
       row(held: held, shown: shown, cw: cw)
       // Под пальцем: стеклянная лупа поверх подписей. Внутри неё то же самое, что лежит под ней,
       // только увеличенное: подписи плывут под стеклом и не подменяются, выбор меняется только когда отпустишь.
-      if held {
+      if held && w > 40 { // пока ширина не измерена, лупу не рисуем: иначе размеры выходят отрицательными
         let lw = cw * 1.22, lh = height * 1.3, cx = x + cw / 2
         let shape = RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous)
         ZStack(alignment: .leading) {
@@ -51,7 +51,7 @@ struct Lens<Item: View>: View {
             .frame(width: w, height: height)
             .scaleEffect(1.2, anchor: UnitPoint(x: cx / max(1, w), y: 0.5))
             .frame(height: lh)
-            .mask(alignment: .leading) { shape.frame(width: lw - 4, height: lh - 4).offset(x: cx - lw / 2 + 2) }
+            .mask(alignment: .leading) { shape.frame(width: max(1, lw - 4), height: max(1, lh - 4)).offset(x: cx - lw / 2 + 2) }
         }
         .frame(height: height)
         .allowsHitTesting(false)
