@@ -53,6 +53,8 @@ struct Lens<Item: View>: View {
           .frame(width: w, height: height)
           .scaleEffect(held ? 1.22 : 1, anchor: UnitPoint(x: cx / w, y: 0.5))
           .frame(height: height * 1.3)
+          .bulge(center: CGPoint(x: cx, y: height * 0.65), half: CGSize(width: cw * sx / 2, height: height * sy / 2),
+                 radius: held ? radius * 1.3 : radius, strength: held ? 0.45 : 0)
           .mask(alignment: .leading) { shape.frame(width: cw * sx, height: height * sy).offset(x: cx - cw * sx / 2) }
           .allowsHitTesting(false)
       }
@@ -82,5 +84,19 @@ struct Lens<Item: View>: View {
     )
     .animation(.spring(response: 0.42, dampingFraction: 0.8), value: index)
     .onChange(of: index) { i in if settled == i { settled = nil } }
+  }
+}
+
+// Изгиб текста по кромке линзы (шейдер Shaders/lens.metal). Если шейдера в сборке нет или iOS старше 17, просто ничего не делает.
+private let hasLensShader = Bundle.main.url(forResource: "default", withExtension: "metallib") != nil
+extension View {
+  @ViewBuilder func bulge(center: CGPoint, half: CGSize, radius: CGFloat, strength: CGFloat) -> some View {
+    if #available(iOS 17.0, *), hasLensShader {
+      distortionEffect(
+        Shader(function: ShaderFunction(library: .default, name: "lensBulge"), arguments: [
+          .float2(center), .float2(half.width, half.height), .float(radius), .float(18), .float(strength),
+        ]),
+        maxSampleOffset: CGSize(width: 80, height: 50), isEnabled: strength > 0)
+    } else { self }
   }
 }

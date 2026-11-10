@@ -29,6 +29,11 @@ if [ "$PLAT" = iphonesimulator ]; then
   done
 fi
 cp ../schedule.json format.js "$APP/"
+# Шейдер линзы. Если компилятора Metal нет, приложение собирается без изгиба по кромке.
+if [ "$PLAT" = iphoneos ]; then MT=air64-apple-ios17.0; else MT=air64-apple-ios17.0-simulator; fi
+if xcrun -sdk "$PLAT" metal -target $MT -c Shaders/lens.metal -o "$OUT/lens.air" > "$OUT/metal.log" 2>&1 \
+   && xcrun -sdk "$PLAT" metallib "$OUT/lens.air" -o "$APP/default.metallib" >> "$OUT/metal.log" 2>&1; then echo "shader ok $PLAT"
+else echo "::warning::Шейдер линзы не собран ($PLAT): $(head -c 300 "$OUT/metal.log" | tr '\n' ' ')"; fi
 cp build/fonts/*.ttf "$APP/"
 xcrun actool AppIcon.icon Assets.xcassets --compile "$APP" --platform "$PLAT" --minimum-deployment-target 16.2 \
   --app-icon AppIcon --target-device iphone --target-device ipad --output-partial-info-plist "$OUT/partial.plist" > "$OUT/icon.log" 2>&1 \
