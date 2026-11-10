@@ -17,46 +17,44 @@ struct Lens<Item: View>: View {
   @State private var hover: Int? = nil
   @State private var w: CGFloat = 1
 
-  func row(held: Bool, shown: Int, cw: CGFloat) -> some View {
-    HStack(spacing: 0) {
+  func row(sel: Bool) -> some View {
+    let cw = w / CGFloat(max(1, count))
+    return HStack(spacing: 0) {
       ForEach(0..<count, id: \.self) { i in
-        item(i, !held && i == shown)
-          .frame(width: cw, height: height)
-          .opacity(disabled(i) ? 0.3 : 1)
+        item(i, sel).frame(width: cw, height: height).opacity(disabled(i) ? 0.3 : 1)
       }
     }
   }
 
+  // Как панель вкладок в Telegram: выделение само и есть линза. Зажал, оно вырастает и едет за пальцем,
+  // внутри него всё, что под ним, показано увеличенным и в «выбранном» виде, снаружи обычным.
+  // Подписи не подменяются, а проплывают под линзой; выбор меняется, только когда отпустишь.
   var body: some View {
     let cw = w / CGFloat(max(1, count))
     let held = finger != nil
-    let shown = hover ?? settled ?? index
     let x = finger.map { min(max($0 - cw / 2, 0), w - cw) } ?? CGFloat(settled ?? index) * cw
+    let cx = x + cw / 2
+    let under = max(0, min(count - 1, Int(cx / max(1, cw))))
+    let sx: CGFloat = held ? 1.2 : 1, sy: CGFloat = held ? 1.3 : 1
+    let shape = RoundedRectangle(cornerRadius: held ? radius * 1.3 : radius, style: .continuous)
     ZStack(alignment: .leading) {
-      // Выделение в покое: залитая плашка под подписями
-      RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill(shown))
-        .frame(width: cw, height: height)
-        .opacity(held ? 0 : 1)
-        .offset(x: x)
-      row(held: held, shown: shown, cw: cw)
-      // Под пальцем: стеклянная лупа поверх подписей. Внутри неё то же самое, что лежит под ней,
-      // только увеличенное: подписи плывут под стеклом и не подменяются, выбор меняется только когда отпустишь.
-      if held && w > 40 { // пока ширина не измерена, лупу не рисуем: иначе размеры выходят отрицательными
-        let lw = cw * 1.22, lh = height * 1.3, cx = x + cw / 2
-        let shape = RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous)
-        ZStack(alignment: .leading) {
-          Color.clear.frame(width: lw, height: lh).clearGlass(shape)
-            .offset(x: cx - lw / 2)
-          row(held: true, shown: shown, cw: cw)
-            .frame(width: w, height: height)
-            .scaleEffect(1.2, anchor: UnitPoint(x: cx / max(1, w), y: 0.5))
-            .frame(height: lh)
-            .mask(alignment: .leading) { shape.frame(width: max(1, lw - 4), height: max(1, lh - 4)).offset(x: cx - lw / 2 + 2) }
+      row(sel: false)
+      shape.fill(fill(under))
+        .overlay {
+          // Кромка стекла: тонкий блик с радужным отливом, виден только пока держишь
+          shape.strokeBorder(AngularGradient(colors: [.white.opacity(0.9), .cyan.opacity(0.7), .clear, .purple.opacity(0.6), .orange.opacity(0.6), .clear, .white.opacity(0.9)], center: .center), lineWidth: 1.5)
+            .opacity(held ? 1 : 0)
         }
-        .frame(height: height)
-        .allowsHitTesting(false)
-        .transition(.scale(scale: 0.85, anchor: UnitPoint(x: cx / max(1, w), y: 0.5)).combined(with: .opacity))
-        .zIndex(2)
+        .frame(width: cw * sx, height: height * sy)
+        .shadow(color: .black.opacity(held ? 0.35 : 0), radius: 10, y: 4)
+        .offset(x: cx - cw * sx / 2)
+      if w > 40 {
+        row(sel: true)
+          .frame(width: w, height: height)
+          .scaleEffect(held ? 1.22 : 1, anchor: UnitPoint(x: cx / w, y: 0.5))
+          .frame(height: height * 1.3)
+          .mask(alignment: .leading) { shape.frame(width: cw * sx, height: height * sy).offset(x: cx - cw * sx / 2) }
+          .allowsHitTesting(false)
       }
     }
     .frame(height: height)
