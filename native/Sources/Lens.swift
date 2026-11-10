@@ -12,7 +12,7 @@ struct Lens<Item: View>: View {
   let onPick: (Int) -> Void
   @ViewBuilder let item: (Int, Bool) -> Item // номер, выделен ли (при зажатии выделен тот, что под пальцем)
 
-  @State private var finger: CGFloat? = nil
+  @State private var finger: CGFloat? = Shot.screen == "lens" ? 150 : nil // для скриншота: линза как под пальцем
   @State private var settled: Int? = nil // куда отпустили: линза остаётся там, пока выбор не дойдёт до родителя
   @State private var hover: Int? = nil
   @State private var w: CGFloat = 1
@@ -23,19 +23,11 @@ struct Lens<Item: View>: View {
     let shown = hover ?? settled ?? index
     let x = finger.map { min(max($0 - cw / 2, 0), w - cw) } ?? CGFloat(settled ?? index) * cw
     ZStack(alignment: .leading) {
-      // Выделение: в покое залито, под пальцем стеклянная линза чуть больше ячейки
-      Group {
-        if held {
-          // Прозрачная линза: под ней видно день и число пар, как в панели вкладок Apple Music
-          RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.clear)
-            .clearGlass(RoundedRectangle(cornerRadius: radius, style: .continuous))
-        } else {
-          RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill(shown))
-        }
-      }
-      .frame(width: cw, height: height)
-      .scaleEffect(held ? 1.14 : 1)
-      .offset(x: x)
+      // Выделение в покое: залитая плашка под подписями
+      RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill(shown))
+        .frame(width: cw, height: height)
+        .opacity(held ? 0 : 1)
+        .offset(x: x)
       HStack(spacing: 0) {
         ForEach(0..<count, id: \.self) { i in
           item(i, !held && i == shown)
@@ -43,6 +35,18 @@ struct Lens<Item: View>: View {
             .scaleEffect(held && i == hover ? 1.08 : 1)
             .opacity(disabled(i) ? 0.3 : 1)
         }
+      }
+      // Под пальцем: стеклянная линза ПОВЕРХ подписей. Стекло преломляет то, что лежит под ним,
+      // поэтому раньше, когда линза была под текстом, эффекта не было видно.
+      if held {
+        Color.clear
+          .frame(width: cw, height: height)
+          .clearGlass(RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous))
+          .scaleEffect(x: 1.22, y: 1.3)
+          .offset(x: x)
+          .allowsHitTesting(false)
+          .transition(.scale(scale: 0.8).combined(with: .opacity))
+          .zIndex(2)
       }
     }
     .frame(height: height)

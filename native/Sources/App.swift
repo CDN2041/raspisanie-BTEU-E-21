@@ -81,7 +81,7 @@ struct RootView: View {
     guard let s = Shot.screen, let sc = store.sched else { return }
     nav.sel = sc.clamp(store.now)
     switch s {
-    case "full": nav.path = ["full"]
+    case "full", "lens": nav.path = ["full"]
     case "cal": nav.path = ["full"]; DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { nav.calendar = true }
     case "settings": DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { nav.settings = true }
     case "editor", "editor-gen", "editor-sess", "savetest": DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { nav.editor = true }
