@@ -39,10 +39,19 @@ struct Lens<Item: View>: View {
       // Под пальцем: стеклянная линза ПОВЕРХ подписей. Стекло преломляет то, что лежит под ним,
       // поэтому раньше, когда линза была под текстом, эффекта не было видно.
       if held {
-        Color.clear
-          .frame(width: cw, height: height)
-          .clearGlass(RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous))
-          .scaleEffect(x: 1.22, y: 1.3)
+        // Само стекло размывает то, что под ним, поэтому день под пальцем рисуем ещё раз внутри линзы, крупнее
+        let hi = hover ?? max(0, min(count - 1, Int((x + cw / 2) / max(1, cw))))
+        ZStack {
+          Color.clear
+            .frame(width: cw, height: height)
+            .clearGlass(RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous))
+            .scaleEffect(x: 1.22, y: 1.3)
+          item(hi, false)
+            .frame(width: cw, height: height)
+            .scaleEffect(1.16)
+            .opacity(disabled(hi) ? 0.3 : 1)
+            .id(hi).transition(.opacity)
+        }
           .offset(x: x)
           .allowsHitTesting(false)
           .transition(.scale(scale: 0.8).combined(with: .opacity))
