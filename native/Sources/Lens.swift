@@ -17,6 +17,16 @@ struct Lens<Item: View>: View {
   @State private var hover: Int? = nil
   @State private var w: CGFloat = 1
 
+  func row(held: Bool, shown: Int, cw: CGFloat) -> some View {
+    HStack(spacing: 0) {
+      ForEach(0..<count, id: \.self) { i in
+        item(i, !held && i == shown)
+          .frame(width: cw, height: height)
+          .opacity(disabled(i) ? 0.3 : 1)
+      }
+    }
+  }
+
   var body: some View {
     let cw = w / CGFloat(max(1, count))
     let held = finger != nil
@@ -28,34 +38,25 @@ struct Lens<Item: View>: View {
         .frame(width: cw, height: height)
         .opacity(held ? 0 : 1)
         .offset(x: x)
-      HStack(spacing: 0) {
-        ForEach(0..<count, id: \.self) { i in
-          item(i, !held && i == shown)
-            .frame(width: cw, height: height)
-            .scaleEffect(held && i == hover ? 1.08 : 1)
-            .opacity(disabled(i) ? 0.3 : 1)
-        }
-      }
-      // Под пальцем: стеклянная линза ПОВЕРХ подписей. Стекло преломляет то, что лежит под ним,
-      // поэтому раньше, когда линза была под текстом, эффекта не было видно.
+      row(held: held, shown: shown, cw: cw)
+      // Под пальцем: стеклянная лупа поверх подписей. Внутри неё то же самое, что лежит под ней,
+      // только увеличенное: подписи плывут под стеклом и не подменяются, выбор меняется только когда отпустишь.
       if held {
-        // Само стекло размывает то, что под ним, поэтому день под пальцем рисуем ещё раз внутри линзы, крупнее
-        let hi = hover ?? max(0, min(count - 1, Int((x + cw / 2) / max(1, cw))))
-        ZStack {
-          Color.clear
-            .frame(width: cw, height: height)
-            .clearGlass(RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous))
-            .scaleEffect(x: 1.22, y: 1.3)
-          item(hi, false)
-            .frame(width: cw, height: height)
-            .scaleEffect(1.16)
-            .opacity(disabled(hi) ? 0.3 : 1)
-            .id(hi).transition(.opacity)
+        let lw = cw * 1.22, lh = height * 1.3, cx = x + cw / 2
+        let shape = RoundedRectangle(cornerRadius: radius * 1.2, style: .continuous)
+        ZStack(alignment: .leading) {
+          Color.clear.frame(width: lw, height: lh).clearGlass(shape)
+            .offset(x: cx - lw / 2)
+          row(held: true, shown: shown, cw: cw)
+            .frame(width: w, height: height)
+            .scaleEffect(1.2, anchor: UnitPoint(x: cx / max(1, w), y: 0.5))
+            .frame(height: lh)
+            .mask(alignment: .leading) { shape.frame(width: lw - 4, height: lh - 4).offset(x: cx - lw / 2 + 2) }
         }
-          .offset(x: x)
-          .allowsHitTesting(false)
-          .transition(.scale(scale: 0.8).combined(with: .opacity))
-          .zIndex(2)
+        .frame(height: height)
+        .allowsHitTesting(false)
+        .transition(.scale(scale: 0.85, anchor: UnitPoint(x: cx / max(1, w), y: 0.5)).combined(with: .opacity))
+        .zIndex(2)
       }
     }
     .frame(height: height)
