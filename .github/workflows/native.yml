@@ -21,7 +21,6 @@ jobs:
           X=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
           [ -n "$X" ] || { echo "::error::Нет Xcode 26"; exit 1; }
           sudo xcode-select -s "$X"
-          xcodebuild -downloadComponent MetalToolchain || true
       - name: Fonts
         run: |
           mkdir -p native/build/fonts && cd native/build/fonts

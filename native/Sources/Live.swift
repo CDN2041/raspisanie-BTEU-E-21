@@ -27,7 +27,7 @@ enum Live {
     }
     let content = ActivityContent(state: st, staleDate: st.cd)
     if let a = alive.first(where: { $0.attributes.day == dk }) {
-      if a.content.state != st { await a.update(content) } // без лишних обновлений: у iOS на них лимит
+      await a.update(content)
       for o in alive where o.id != a.id { await o.end(nil, dismissalPolicy: .immediate) }
       schedule(st.cd)
       return .shown

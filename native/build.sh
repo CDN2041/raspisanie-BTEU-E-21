@@ -9,11 +9,11 @@ rm -rf "$OUT"; mkdir -p "$APP"
 SDK=$(xcrun --sdk "$PLAT" --show-sdk-path)
 if [ "$PLAT" = iphoneos ]; then TGT=arm64-apple-ios16.2; else TGT=$(uname -m)-apple-ios16.2-simulator; fi
 fail() { grep -E "error:" "$1" | sort -u | head -40 | while IFS= read -r l; do echo "::error::${l#*native/}"; done; exit 1; }
-xcrun --sdk "$PLAT" swiftc -O -wmo -parse-as-library -sdk "$SDK" -target "$TGT" Sources/*.swift -o "$APP/Pary" > "$OUT/build.log" 2>&1 || fail "$OUT/build.log"
+xcrun --sdk "$PLAT" swiftc -O -parse-as-library -sdk "$SDK" -target "$TGT" Sources/*.swift -o "$APP/Pary" > "$OUT/build.log" 2>&1 || fail "$OUT/build.log"
 # Виджет: отдельная программа внутри приложения, общие файлы модели и вида
 WX="$APP/PlugIns/ParyWidget.appex"
 mkdir -p "$WX"
-xcrun --sdk "$PLAT" swiftc -O -wmo -parse-as-library -application-extension -sdk "$SDK" -target "$TGT" \
+xcrun --sdk "$PLAT" swiftc -O -parse-as-library -application-extension -sdk "$SDK" -target "$TGT" \
   Widget/*.swift Sources/Model.swift Sources/Theme.swift Sources/Shared.swift Sources/WidgetState.swift Sources/WidgetViews.swift Sources/LiveState.swift Sources/LiveViews.swift \
   -Xlinker -e -Xlinker _NSExtensionMain -Xlinker -rpath -Xlinker @executable_path/../../Frameworks \
   -o "$WX/ParyWidget" > "$OUT/widget.log" 2>&1 || fail "$OUT/widget.log"
@@ -29,11 +29,6 @@ if [ "$PLAT" = iphonesimulator ]; then
   done
 fi
 cp ../schedule.json format.js "$APP/"
-# Шейдер линзы. Если компилятора Metal нет, приложение собирается без изгиба по кромке.
-if [ "$PLAT" = iphoneos ]; then MT=air64-apple-ios17.0; else MT=air64-apple-ios17.0-simulator; fi
-if xcrun -sdk "$PLAT" metal -target $MT -c Shaders/lens.metal -o "$OUT/lens.air" > "$OUT/metal.log" 2>&1 \
-   && xcrun -sdk "$PLAT" metallib "$OUT/lens.air" -o "$APP/default.metallib" >> "$OUT/metal.log" 2>&1; then echo "shader ok $PLAT"
-else echo "::warning::Шейдер линзы не собран ($PLAT): $(head -c 300 "$OUT/metal.log" | tr '\n' ' ')"; fi
 cp build/fonts/*.ttf "$APP/"
 xcrun actool AppIcon.icon Assets.xcassets --compile "$APP" --platform "$PLAT" --minimum-deployment-target 16.2 \
   --app-icon AppIcon --target-device iphone --target-device ipad --output-partial-info-plist "$OUT/partial.plist" > "$OUT/icon.log" 2>&1 \
@@ -46,7 +41,7 @@ mkdir -p "$WA"
 if [ "$PLAT" = iphoneos ]; then WS=watchos; WT="arm64_32-apple-watchos10.0 arm64-apple-watchos10.0"; else WS=watchsimulator; WT="$(uname -m)-apple-watchos10.0-simulator"; fi
 WSDK=$(xcrun --sdk $WS --show-sdk-path)
 for T in $WT; do
-  xcrun --sdk $WS swiftc -O -wmo -parse-as-library -sdk "$WSDK" -target "$T" Watch/*.swift Sources/Model.swift Sources/WidgetState.swift \
+  xcrun --sdk $WS swiftc -O -parse-as-library -sdk "$WSDK" -target "$T" Watch/*.swift Sources/Model.swift Sources/WidgetState.swift \
     -o "$OUT/ParyWatch-$T" > "$OUT/watch.log" 2>&1 || fail "$OUT/watch.log"
 done
 xcrun lipo -create "$OUT"/ParyWatch-* -output "$WA/ParyWatch"

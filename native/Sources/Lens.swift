@@ -12,51 +12,37 @@ struct Lens<Item: View>: View {
   let onPick: (Int) -> Void
   @ViewBuilder let item: (Int, Bool) -> Item // номер, выделен ли (при зажатии выделен тот, что под пальцем)
 
-  @State private var finger: CGFloat? = Shot.screen == "lens" ? 150 : nil // для скриншота: линза как под пальцем
+  @State private var finger: CGFloat? = nil
   @State private var settled: Int? = nil // куда отпустили: линза остаётся там, пока выбор не дойдёт до родителя
   @State private var hover: Int? = nil
   @State private var w: CGFloat = 1
 
-  func row(sel: Bool) -> some View {
-    let cw = w / CGFloat(max(1, count))
-    return HStack(spacing: 0) {
-      ForEach(0..<count, id: \.self) { i in
-        item(i, sel).frame(width: cw, height: height).opacity(disabled(i) ? 0.3 : 1)
-      }
-    }
-  }
-
-  // Как панель вкладок в Telegram: выделение само и есть линза. Зажал, оно вырастает и едет за пальцем,
-  // внутри него всё, что под ним, показано увеличенным и в «выбранном» виде, снаружи обычным.
-  // Подписи не подменяются, а проплывают под линзой; выбор меняется, только когда отпустишь.
   var body: some View {
     let cw = w / CGFloat(max(1, count))
     let held = finger != nil
+    let shown = hover ?? settled ?? index
     let x = finger.map { min(max($0 - cw / 2, 0), w - cw) } ?? CGFloat(settled ?? index) * cw
-    let cx = x + cw / 2
-    let under = max(0, min(count - 1, Int(cx / max(1, cw))))
-    let sx: CGFloat = held ? 1.2 : 1, sy: CGFloat = held ? 1.3 : 1
-    let shape = RoundedRectangle(cornerRadius: held ? radius * 1.3 : radius, style: .continuous)
     ZStack(alignment: .leading) {
-      row(sel: false)
-      shape.fill(fill(under))
-        .overlay {
-          // Кромка стекла: тонкий блик с радужным отливом, виден только пока держишь
-          shape.strokeBorder(AngularGradient(colors: [.white.opacity(0.9), .cyan.opacity(0.7), .clear, .purple.opacity(0.6), .orange.opacity(0.6), .clear, .white.opacity(0.9)], center: .center), lineWidth: 1.5)
-            .opacity(held ? 1 : 0)
+      // Выделение: в покое залито, под пальцем стеклянная линза чуть больше ячейки
+      Group {
+        if held {
+          // Прозрачная линза: под ней видно день и число пар, как в панели вкладок Apple Music
+          RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.clear)
+            .clearGlass(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        } else {
+          RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill(shown))
         }
-        .frame(width: cw * sx, height: height * sy)
-        .shadow(color: .black.opacity(held ? 0.35 : 0), radius: 10, y: 4)
-        .offset(x: cx - cw * sx / 2)
-      if w > 40 {
-        row(sel: true)
-          .frame(width: w, height: height)
-          .scaleEffect(held ? 1.22 : 1, anchor: UnitPoint(x: cx / w, y: 0.5))
-          .frame(height: height * 1.3)
-          .bulge(center: CGPoint(x: cx, y: height * 0.65), half: CGSize(width: cw * sx / 2, height: height * sy / 2),
-                 radius: held ? radius * 1.3 : radius, strength: held ? 0.45 : 0)
-          .mask(alignment: .leading) { shape.frame(width: cw * sx, height: height * sy).offset(x: cx - cw * sx / 2) }
-          .allowsHitTesting(false)
+      }
+      .frame(width: cw, height: height)
+      .scaleEffect(held ? 1.14 : 1)
+      .offset(x: x)
+      HStack(spacing: 0) {
+        ForEach(0..<count, id: \.self) { i in
+          item(i, !held && i == shown)
+            .frame(width: cw, height: height)
+            .scaleEffect(held && i == hover ? 1.08 : 1)
+            .opacity(disabled(i) ? 0.3 : 1)
+        }
       }
     }
     .frame(height: height)
@@ -84,19 +70,5 @@ struct Lens<Item: View>: View {
     )
     .animation(.spring(response: 0.42, dampingFraction: 0.8), value: index)
     .onChange(of: index) { i in if settled == i { settled = nil } }
-  }
-}
-
-// Изгиб текста по кромке линзы (шейдер Shaders/lens.metal). Если шейдера в сборке нет или iOS старше 17, просто ничего не делает.
-private let hasLensShader = Bundle.main.url(forResource: "default", withExtension: "metallib") != nil
-extension View {
-  @ViewBuilder func bulge(center: CGPoint, half: CGSize, radius: CGFloat, strength: CGFloat) -> some View {
-    if #available(iOS 17.0, *), hasLensShader {
-      distortionEffect(
-        Shader(function: ShaderFunction(library: .default, name: "lensBulge"), arguments: [
-          .float2(center), .float2(half.width, half.height), .float(radius), .float(18), .float(strength),
-        ]),
-        maxSampleOffset: CGSize(width: 80, height: 50), isEnabled: strength > 0)
-    } else { self }
   }
 }

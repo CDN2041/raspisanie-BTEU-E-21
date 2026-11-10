@@ -41,8 +41,8 @@ func mondayOf(_ d: Date) -> Date { addDays(d, -wd(d)) }
 func daysBetween(_ a: Date, _ b: Date) -> Int { cal.dateComponents([.day], from: day0(a), to: day0(b)).day ?? 0 }
 func weeksBetween(_ a: Date, _ b: Date) -> Int { Int((Double(daysBetween(mondayOf(a), mondayOf(b))) / 7).rounded()) }
 func key(_ d: Date) -> String {
-  let c = cal.dateComponents([.year, .month, .day], from: d), m = c.month!, x = c.day!
-  return "\(c.year!)-" + (m < 10 ? "0" : "") + "\(m)-" + (x < 10 ? "0" : "") + "\(x)"
+  let c = cal.dateComponents([.year, .month, .day], from: d)
+  return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
 }
 func pd(_ s: String) -> Date? {
   let a = s.split(separator: "-").compactMap { Int($0) }

@@ -102,7 +102,6 @@ struct EditorMain: View {
   @Binding var web: Bool
   let close: () -> Void
   @State private var tab = Shot.screen == "editor-gen" ? "gen" : Shot.screen == "editor-sess" ? "sess" : "week"
-  @State private var warm: Set<String> = [Shot.screen == "editor-gen" ? "gen" : Shot.screen == "editor-sess" ? "sess" : "week"]
   @State private var pick: PickMode? = nil
   @State private var form: FormRef? = nil
   @State private var forever: Int? = nil
@@ -128,17 +127,19 @@ struct EditorMain: View {
       .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 12)
       .frame(maxWidth: 560).frame(maxWidth: .infinity)
       // Дни листаются системным листанием, как в расписании; прокрутка внутри дня обычная
-      // Вкладки не пересоздаются при переключении: все три живут рядом, меняется только видимость.
-      // Раньше «Общее» со всеми полями времени строилось заново на каждый переход, отсюда были провисания.
-      ZStack {
-        pager.shown(tab == "week")
-        if warm.contains("sess") { side { SessionTab(ed: ed) }.shown(tab == "sess") }
-        if warm.contains("gen") { side { GeneralTab(ed: ed, openAlt: { tab = "week" }) }.shown(tab == "gen") }
+      Group {
+        if tab == "week" { pager }
+        else {
+          ScrollView {
+            Group { if tab == "sess" { SessionTab(ed: ed) } else { GeneralTab(ed: ed, openAlt: { tab = "week" }) } }
+              .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 110)
+              .frame(maxWidth: 560).frame(maxWidth: .infinity)
+          }
+          .scrollIndicators(.hidden)
+        }
       }
+      .transition(.opacity)
     }
-    .onChange(of: tab) { warm.insert($0) }
-    // Остальные вкладки готовим заранее, сразу после открытия редактора
-    .task { try? await Task.sleep(nanoseconds: 500_000_000); warm = ["week", "sess", "gen"] }
     .safeAreaInset(edge: .bottom) { if ed.dirty { saveBar } }
     .animation(.spring(response: 0.45, dampingFraction: 0.86), value: ed.dirty)
     .sheet(item: $pick) { m in PickSheet(ed: ed, mode: m).preferredColorScheme(store.colorScheme) }
@@ -159,14 +160,6 @@ struct EditorMain: View {
       Button("Остаться", role: .cancel) {}
       Button("Закрыть", role: .destructive) { close() }
     } message: { Text("Несохранённые изменения пропадут.") }
-  }
-
-  func side<V: View>(@ViewBuilder _ v: () -> V) -> some View {
-    ScrollView {
-      v().padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 110)
-        .frame(maxWidth: 560).frame(maxWidth: .infinity)
-    }
-    .scrollIndicators(.hidden)
   }
 
   var altBanner: some View {
@@ -453,9 +446,4 @@ struct ECardView<Acts: View>: View {
     .contentShape(Rectangle())
     .onTapGesture { if let onTap { Haptic.tap(); onTap() } }
   }
-}
-
-extension View {
-  // Вкладка на месте, но не видна и не ловит нажатия
-  func shown(_ on: Bool) -> some View { opacity(on ? 1 : 0).allowsHitTesting(on).accessibilityHidden(!on) }
 }
