@@ -34,6 +34,7 @@ dependencies {
   implementation "androidx.compose.foundation:foundation"
   implementation "androidx.wear.compose:compose-material:1.4.0"
   implementation "androidx.wear.compose:compose-foundation:1.4.0"
+  implementation "androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1"
   implementation "androidx.activity:activity-compose:1.9.3"
   implementation "androidx.lifecycle:lifecycle-runtime-compose:2.8.7"
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"

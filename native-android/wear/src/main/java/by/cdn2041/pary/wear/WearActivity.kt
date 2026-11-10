@@ -86,7 +86,7 @@ class WearStore(private val ctx: Context, val shotNow: LocalDateTime?) {
       } catch (e: Exception) { null }
     } ?: return
     if (s == text) return
-    if (adopt(s)) withContext(Dispatchers.IO) { try { file.writeText(s) } catch (_: Exception) {} }
+    if (adopt(s)) { withContext(Dispatchers.IO) { try { file.writeText(s) } catch (_: Exception) {} }; ParyComplication.refresh(ctx) }
   }
   companion object { const val SITE_URL = "https://cdn2041.github.io/raspisanie-BTEU-E-21/schedule.json" }
 }
