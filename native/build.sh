@@ -9,11 +9,11 @@ rm -rf "$OUT"; mkdir -p "$APP"
 SDK=$(xcrun --sdk "$PLAT" --show-sdk-path)
 if [ "$PLAT" = iphoneos ]; then TGT=arm64-apple-ios16.2; else TGT=$(uname -m)-apple-ios16.2-simulator; fi
 fail() { grep -E "error:" "$1" | sort -u | head -40 | while IFS= read -r l; do echo "::error::${l#*native/}"; done; exit 1; }
-xcrun --sdk "$PLAT" swiftc -O -parse-as-library -sdk "$SDK" -target "$TGT" Sources/*.swift -o "$APP/Pary" > "$OUT/build.log" 2>&1 || fail "$OUT/build.log"
+xcrun --sdk "$PLAT" swiftc -O -wmo -parse-as-library -sdk "$SDK" -target "$TGT" Sources/*.swift -o "$APP/Pary" > "$OUT/build.log" 2>&1 || fail "$OUT/build.log"
 # Виджет: отдельная программа внутри приложения, общие файлы модели и вида
 WX="$APP/PlugIns/ParyWidget.appex"
 mkdir -p "$WX"
-xcrun --sdk "$PLAT" swiftc -O -parse-as-library -application-extension -sdk "$SDK" -target "$TGT" \
+xcrun --sdk "$PLAT" swiftc -O -wmo -parse-as-library -application-extension -sdk "$SDK" -target "$TGT" \
   Widget/*.swift Sources/Model.swift Sources/Theme.swift Sources/Shared.swift Sources/WidgetState.swift Sources/WidgetViews.swift Sources/LiveState.swift Sources/LiveViews.swift \
   -Xlinker -e -Xlinker _NSExtensionMain -Xlinker -rpath -Xlinker @executable_path/../../Frameworks \
   -o "$WX/ParyWidget" > "$OUT/widget.log" 2>&1 || fail "$OUT/widget.log"
@@ -41,7 +41,7 @@ mkdir -p "$WA"
 if [ "$PLAT" = iphoneos ]; then WS=watchos; WT="arm64_32-apple-watchos10.0 arm64-apple-watchos10.0"; else WS=watchsimulator; WT="$(uname -m)-apple-watchos10.0-simulator"; fi
 WSDK=$(xcrun --sdk $WS --show-sdk-path)
 for T in $WT; do
-  xcrun --sdk $WS swiftc -O -parse-as-library -sdk "$WSDK" -target "$T" Watch/*.swift Sources/Model.swift Sources/WidgetState.swift \
+  xcrun --sdk $WS swiftc -O -wmo -parse-as-library -sdk "$WSDK" -target "$T" Watch/*.swift Sources/Model.swift Sources/WidgetState.swift \
     -o "$OUT/ParyWatch-$T" > "$OUT/watch.log" 2>&1 || fail "$OUT/watch.log"
 done
 xcrun lipo -create "$OUT"/ParyWatch-* -output "$WA/ParyWatch"

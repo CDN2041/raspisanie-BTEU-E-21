@@ -32,6 +32,7 @@ shoot() { # устройство, префикс, экраны...
     xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH.png" >/dev/null 2>&1
     echo "shot $P-$SC-$TH"
     xcrun simctl spawn "$U" launchctl list 2>/dev/null | grep -q by.cdn2041.pary || echo "== $P-$SC-$TH: приложение не запущено" >> build/shots/diag.txt
+    case "$SC" in editor*) sleep 10; xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH.png" >/dev/null 2>&1;; esac
     if [ "$SC" = live ]; then
       sleep 12; xcrun simctl io "$U" screenshot "build/shots/$P-$SC-$TH-late.png" >/dev/null 2>&1
       { echo "== log $SC $TH"; xcrun simctl spawn "$U" log show --last 40s --style compact --predicate 'process == "Pary"' 2>&1 | grep -iv "fault\|debug" | tail -40; } >> build/shots/live-log.txt
@@ -48,7 +49,7 @@ shoot() { # устройство, префикс, экраны...
 PH=$(pick "iPhone" "Max"); PH=${PH:-$(pick "iPhone" "")}
 PAD=$(pick "iPad Pro 11" ""); PAD=${PAD:-$(pick "iPad" "mini")}
 echo "iPhone $PH, iPad $PAD"
-shoot "$PH" phone editor:dark live:dark live:light
+shoot "$PH" phone editor:dark editor-gen:dark live:dark live:light
 [ -n "$PAD" ] && shoot "$PAD" ipad home:dark
 ls build/shots
 # Отчёты о падениях приложения, если были
