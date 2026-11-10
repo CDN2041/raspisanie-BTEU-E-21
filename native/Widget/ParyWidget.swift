@@ -39,7 +39,7 @@ struct Provider: TimelineProvider {
   private func updateLive(_ sc: Sched, _ now: Date, _ st: LiveState?) async {
     let dk = key(day0(now))
     for a in Activity<ParyAttributes>.activities where a.activityState == .active || a.activityState == .stale {
-      if let st, a.attributes.day == dk { await a.update(ActivityContent(state: st, staleDate: st.cd)) }
+      if let st, a.attributes.day == dk { if a.content.state != st { await a.update(ActivityContent(state: st, staleDate: st.cd)) } }
       else { await a.end(nil, dismissalPolicy: .immediate) }
     }
   }
